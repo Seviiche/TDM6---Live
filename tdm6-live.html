@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TDM6 — Test en direct</title>
+<style>
+  :root{
+    --paper:#f6f3ee;
+    --ink:#1f2a24;
+    --line:#cfc6b8;
+    --accent:#7a3b2e;
+    --accent-soft:#e8d9cf;
+    --track:#2f4d3a;
+    --track-soft:#dde6df;
+    --warn:#a8431f;
+    --good:#2f6b4f;
+    --mono: "JetBrains Mono","SF Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family: -apple-system, "Trebuchet MS", Helvetica, Arial, sans-serif;
+    overscroll-behavior:none;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .screen{display:none; min-height:100vh; padding:16px 14px 100px;}
+  .screen.active{display:block;}
+
+  h1{
+    font-size:1.15rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    border-bottom:2.5px solid var(--track);
+    padding-bottom:8px;
+    margin:4px 0 14px;
+  }
+  h2{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--accent);
+    margin:18px 0 8px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:4px;
+  }
+  .card{
+    background:#fffdf9;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  label{
+    display:block;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color:#5b6a60;
+    margin-bottom:4px;
+  }
+  input[type=text]{
+    width:100%;
+    padding:10px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-size:1rem;
+    color:var(--ink);
+  }
+  select{
+    width:100%;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-size:1rem;
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+  .btn{
+    font-family:inherit;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    font-weight:700;
+    font-size:0.85rem;
+    padding:14px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:var(--track);
+    color:#fff;
+    width:100%;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .btn:active{background:#23392c;}
+  .btn-outline{background:transparent;border:1.5px solid var(--track);color:var(--track);}
+  .btn-outline:active{background:var(--track-soft);}
+  .btn-warn{background:var(--warn);}
+  .btn-warn:active{background:#7e3015;}
+  .btn-sm{padding:9px 12px;font-size:0.75rem;width:auto;}
+  .btn-giant{
+    font-size:1.3rem;
+    padding:28px 18px;
+    border-radius:14px;
+  }
+  .stack{display:flex;flex-direction:column;gap:10px;}
+  .row{display:flex;gap:10px;align-items:center;}
+
+  /* ---- Wheel picker ---- */
+  .wheel-group{display:flex;gap:10px;justify-content:center;margin:6px 0;}
+  .wheel-unit{text-align:center;}
+  .wheel-unit .wlabel{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.4px;color:#5b6a60;margin-bottom:4px;}
+  .wheel{
+    position:relative;
+    width:84px;
+    height:132px;
+    overflow-y:scroll;
+    scroll-snap-type:y mandatory;
+    border:1.5px solid var(--track);
+    border-radius:8px;
+    background:#fff;
+    -webkit-overflow-scrolling:touch;
+  }
+  .wheel::-webkit-scrollbar{display:none;}
+  .wheel-item{
+    height:44px;
+    line-height:44px;
+    text-align:center;
+    font-family:var(--mono);
+    font-size:1.2rem;
+    scroll-snap-align:center;
+    color:#aaa49a;
+  }
+  .wheel-item.center-val{color:var(--ink);font-weight:700;}
+  .wheel-pad{height:44px;}
+  .wheel-frame{
+    position:absolute;
+    top:44px;
+    left:0; right:0;
+    height:44px;
+    border-top:1.5px solid var(--accent);
+    border-bottom:1.5px solid var(--accent);
+    pointer-events:none;
+    background:rgba(122,59,46,0.06);
+  }
+  .wheel-wrap{position:relative;}
+
+  /* ---- Running screen ---- */
+  .top-status{
+    position:sticky;
+    top:0;
+    z-index:30;
+    background:var(--track);
+    color:#fff;
+    border-radius:0 0 10px 10px;
+    padding:12px 16px;
+    margin:-16px -14px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .top-status.paused{background:#8a6a2f;}
+  .timer{font-family:var(--mono);font-size:1.7rem;font-weight:700;}
+  .timer small{font-size:0.85rem;font-weight:400;opacity:0.85;}
+  .pause-flag{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;opacity:0.9;}
+
+  .distance-big{
+    text-align:center;
+    margin:10px 0 16px;
+  }
+  .distance-big .num{
+    font-family:var(--mono);
+    font-size:3rem;
+    font-weight:700;
+    color:var(--track);
+    transition:transform 0.12s;
+  }
+  .distance-big .num.pulse{transform:scale(1.12);}
+  .distance-big .unit{font-size:1rem;color:#5b6a60;}
+  .distance-big .speed-live{
+    font-family:var(--mono);
+    font-size:0.95rem;
+    color:var(--accent);
+    margin-top:4px;
+  }
+
+  .minus-row{text-align:center;margin-bottom:8px;}
+
+  .minute-row{
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:8px;
+    background:#fffdf9;
+    opacity:0.4;
+    pointer-events:none;
+  }
+  .minute-row.reached{opacity:1;pointer-events:auto;}
+  .minute-row.due{
+    border-color:var(--warn);
+    box-shadow:0 0 0 3px rgba(168,67,31,0.15);
+    animation:pulse-border 1s ease-in-out 2;
+  }
+  @keyframes pulse-border{
+    0%,100%{box-shadow:0 0 0 3px rgba(168,67,31,0.15);}
+    50%{box-shadow:0 0 0 6px rgba(168,67,31,0.3);}
+  }
+  .minute-row.validated{opacity:1;background:var(--track-soft);}
+  .minute-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    cursor:pointer;
+  }
+  .minute-head .mtitle{font-weight:700;font-size:0.95rem;}
+  .minute-head .msummary{font-family:var(--mono);font-size:0.85rem;color:var(--track);}
+  .minute-body{display:none;margin-top:10px;}
+  .minute-body.open{display:block;}
+  .check-badge{
+    display:inline-block;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--good);
+    color:#fff;
+    text-align:center;
+    line-height:18px;
+    font-size:11px;
+  }
+
+  .note{font-size:0.7rem;color:#8a8275;line-height:1.5;margin-top:4px;}
+
+  #clinical-text{
+    width:100%;
+    min-height:300px;
+    font-family:var(--mono);
+    font-size:0.78rem;
+    line-height:1.5;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fffefb;
+    white-space:pre-wrap;
+  }
+  .copy-feedback{
+    font-size:0.74rem;
+    color:var(--good);
+    text-align:center;
+    opacity:0;
+    transition:opacity 0.3s;
+    margin-top:6px;
+  }
+  .copy-feedback.show{opacity:1;}
+
+  .badge-warn{
+    background:#f7e7df;
+    color:var(--warn);
+    border:1px solid var(--warn);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:0.82rem;
+    margin-bottom:10px;
+  }
+  .badge-ok{
+    background:#e3ede6;
+    color:var(--good);
+    border:1px solid var(--good);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:0.82rem;
+    margin-bottom:10px;
+  }
+  #resultChart{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;}
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN 1: IDENTITY + PRETEST ============ -->
+<div class="screen active" id="screen-pretest">
+  <h1>TDM6 — Test en direct</h1>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Identité</h2>
+    <div class="grid2">
+      <div>
+        <label for="nom">Patient (initiales)</label>
+        <input type="text" id="nom" placeholder="ex. M. D.">
+      </div>
+      <div>
+        <label for="dateTest">Date</label>
+        <input type="text" id="dateTest">
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:10px;">
+      <div>
+        <label for="sexe">Sexe</label>
+        <select id="sexe"><option value="h">Homme</option><option value="f">Femme</option></select>
+      </div>
+      <div>
+        <label for="age">Âge</label>
+        <input type="text" id="age" inputmode="numeric" placeholder="ans">
+      </div>
+      <div>
+        <label for="poids">Poids</label>
+        <input type="text" id="poids" inputmode="numeric" placeholder="kg">
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:10px;">
+      <div>
+        <label for="taille">Taille</label>
+        <input type="text" id="taille" inputmode="numeric" placeholder="cm">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Mesures pré-test (dans l'ordre que vous voulez)</h2>
+    <div class="wheel-group">
+      <div class="wheel-unit">
+        <div class="wlabel">FC (bpm)</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-fc"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">SpO₂ (%)</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-spo2"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">TA sys.</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-tas"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">TA dia.</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-tad"></div></div>
+      </div>
+    </div>
+    <p class="note">Faites défiler chaque roulette jusqu'à la valeur encadrée au centre.</p>
+  </div>
+
+  <button class="btn btn-giant" id="btnStartTest">Patient prêt — Top, démarrer</button>
+</div>
+
+<!-- ============ SCREEN 2: RUNNING TEST ============ -->
+<div class="screen" id="screen-running">
+  <div class="top-status" id="topStatus">
+    <div class="timer"><span id="timerDisplay">00:00</span> <small>/ 6:00</small></div>
+    <div class="pause-flag" id="pauseFlag" style="display:none;">⏸ EN PAUSE</div>
+    <button class="btn btn-sm btn-outline" id="btnPause" style="background:#fff;width:auto;">Pause</button>
+  </div>
+
+  <div class="distance-big">
+    <div class="num" id="distanceNum">0</div>
+    <div class="unit">mètres parcourus</div>
+    <div class="speed-live" id="speedLive">—</div>
+  </div>
+
+  <button class="btn btn-giant" id="btnPlus25">+ 25 m</button>
+  <div class="minus-row">
+    <button class="btn btn-sm btn-outline" id="btnMinus25">− 25 m (correction)</button>
+  </div>
+
+  <h2>Relevés par minute</h2>
+  <div id="minuteRows"></div>
+
+  <button class="btn btn-warn" id="btnStopTest" style="margin-top:14px;">⏹ Terminer le test</button>
+</div>
+
+<!-- ============ SCREEN 3: RECOVERY / POST-TEST ============ -->
+<div class="screen" id="screen-recovery">
+  <h1>Fin du test</h1>
+  <div id="stopBadge"></div>
+
+  <div class="card" id="motifCard" style="display:none;">
+    <label for="motifArret">Motif de l'arrêt anticipé</label>
+    <input type="text" id="motifArret" placeholder="ex. dyspnée, fatigue, douleur...">
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Distance finale</h2>
+    <div class="wheel-group">
+      <div class="wheel-unit">
+        <div class="wlabel">Mètres</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-distfinal"></div></div>
+      </div>
+    </div>
+    <p class="note">Pré-rempli avec le total des +25 m ; ajustez si besoin.</p>
+  </div>
+
+  <button class="btn" id="btnPatientAssis">Patient assis — démarrer les 3 min de repos</button>
+  <div id="recoveryTimerWrap" style="display:none;margin-top:10px;text-align:center;">
+    <div class="timer" style="color:var(--track);"><span id="recoveryTimerDisplay">00:00</span> <small>/ 3:00</small></div>
+  </div>
+
+  <h2>Mesures à l'arrêt</h2>
+  <div class="card">
+    <div class="wheel-group">
+      <div class="wheel-unit"><div class="wlabel">FC</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-fc"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">SpO₂</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-spo2"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA sys.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-tas"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA dia.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-tad"></div></div></div>
+    </div>
+  </div>
+
+  <h2>Mesures à +3 min de repos</h2>
+  <div class="card">
+    <div class="wheel-group">
+      <div class="wheel-unit"><div class="wlabel">FC</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-fc"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">SpO₂</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-spo2"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA sys.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-tas"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA dia.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-tad"></div></div></div>
+    </div>
+  </div>
+
+  <h2>Conditions</h2>
+  <div class="card stack">
+    <div class="row">
+      <label style="margin:0;flex:1;">Aide technique</label>
+      <select id="aideTech" style="width:auto;"><option value="non">Non</option><option value="oui">Oui</option></select>
+    </div>
+    <input type="text" id="aideTechPrec" placeholder="préciser (déambulateur, canne...)">
+    <div class="row">
+      <label style="margin:0;flex:1;">Oxygénothérapie</label>
+      <select id="o2" style="width:auto;"><option value="non">Non</option><option value="oui">Oui</option></select>
+    </div>
+    <input type="text" id="o2Prec" placeholder="préciser (débit, dispositif...)">
+    <label for="incidents" style="margin-top:6px;">Incidents / remarques</label>
+    <input type="text" id="incidents" placeholder="texte libre">
+  </div>
+
+  <button class="btn btn-giant" id="btnFinish" style="margin-top:16px;">Voir toutes les données</button>
+</div>
+
+<!-- ============ SCREEN 4: RESULTS ============ -->
+<div class="screen" id="screen-results">
+  <h1>Résultat complet</h1>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Graphique</h2>
+    <svg id="resultChart" viewBox="0 0 380 420" xmlns="http://www.w3.org/2000/svg"></svg>
+    <button class="btn btn-outline" id="btnCopyChart" style="margin-top:10px;">Copier le graphique</button>
+    <div class="copy-feedback" id="copyChartFeedback">Copié ✓</div>
+  </div>
+
+  <div class="card">
+    <textarea id="clinical-text" readonly></textarea>
+    <button class="btn" id="btnCopy" style="margin-top:10px;">Copier le texte</button>
+    <button class="btn" id="btnCopyAll" style="margin-top:8px;">Copier texte + graphique</button>
+    <div class="copy-feedback" id="copyFeedback">Copié ✓</div>
+    <div class="copy-feedback" id="copyAllFeedback">Copié ✓</div>
+  </div>
+  <button class="btn btn-outline" id="btnNewTest">Nouveau test</button>
+</div>
+
+<script>
+// ---------------- UTILITIES ----------------
+function vibrate(pattern){
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
+function fmtTime(totalSec){
+  const m = Math.floor(totalSec/60), s = totalSec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+let wakeLock = null;
+async function requestWake(){
+  try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function releaseWake(){
+  try{ if(wakeLock) wakeLock.release(); wakeLock=null; }catch(e){}
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ---------------- WHEEL PICKER ----------------
+const ITEM_H = 44;
+function buildWheel(containerId, min, max, step, initial){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  el.appendChild(document.createElement('div')).className='wheel-pad';
+  const values = [];
+  for(let v=min; v<=max; v+=step) values.push(v);
+  values.forEach(v=>{
+    const d = document.createElement('div');
+    d.className='wheel-item';
+    d.textContent = v;
+    d.dataset.val = v;
+    el.appendChild(d);
+  });
+  el.appendChild(document.createElement('div')).className='wheel-pad';
+
+  function setValue(v, smooth){
+    let idx = values.indexOf(v);
+    if(idx<0) idx = Math.round((v-min)/step);
+    idx = Math.max(0, Math.min(values.length-1, idx));
+    el.scrollTo({top: idx*ITEM_H, behavior: smooth? 'smooth':'auto'});
+  }
+  function getValue(){
+    const idx = Math.round(el.scrollTop/ITEM_H);
+    const clamped = Math.max(0, Math.min(values.length-1, idx));
+    return values[clamped];
+  }
+  function highlightCenter(){
+    const idx = Math.round(el.scrollTop/ITEM_H);
+    Array.from(el.children).forEach((c,i)=>{
+      if(c.classList.contains('wheel-item')) c.classList.toggle('center-val', i-1===idx);
+    });
+  }
+  el.addEventListener('scroll', ()=>{ highlightCenter(); });
+  setValue(initial!==undefined && initial!==null ? initial : values[Math.floor(values.length/2)], false);
+  setTimeout(highlightCenter, 50);
+  return {getValue, setValue};
+}
+
+// pretest wheels
+const wPreFc = buildWheel('w-pre-fc', 30, 220, 1, 80);
+const wPreSpo2 = buildWheel('w-pre-spo2', 50, 100, 1, 97);
+const wPreTas = buildWheel('w-pre-tas', 60, 260, 1, 130);
+const wPreTad = buildWheel('w-pre-tad', 30, 150, 1, 80);
+
+// minute wheels are built dynamically per row (see below)
+
+// recovery wheels
+const wArretFc = buildWheel('w-arret-fc', 30, 220, 1, 90);
+const wArretSpo2 = buildWheel('w-arret-spo2', 50, 100, 1, 95);
+const wArretTas = buildWheel('w-arret-tas', 60, 260, 1, 140);
+const wArretTad = buildWheel('w-arret-tad', 30, 150, 1, 80);
+
+const wRecupFc = buildWheel('w-recup-fc', 30, 220, 1, 85);
+const wRecupSpo2 = buildWheel('w-recup-spo2', 50, 100, 1, 96);
+const wRecupTas = buildWheel('w-recup-tas', 60, 260, 1, 130);
+const wRecupTad = buildWheel('w-recup-tad', 30, 150, 1, 80);
+
+const wDistFinal = buildWheel('w-distfinal', 0, 700, 5, 0);
+
+// default date
+(function(){
+  const d = new Date();
+  document.getElementById('dateTest').value = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+})();
+
+// ---------------- STATE ----------------
+const state = {
+  pretest: {fc:null, spo2:null, tas:null, tad:null},
+  distance: 0,
+  distanceLog: [], // [{distance, ts, segDurationSec, speedMs, speedKmh}]
+  minutes: {}, // {1:{fc,spo2}, ...}
+  pauses: [],
+  isPaused: false,
+  pauseStart: null,
+  testStartTs: null,
+  elapsedSec: 0,
+  endedAtSec: null,
+  stoppedEarly: false,
+  recoveryStartTs: null,
+  recoveryElapsedSec: 0,
+  recoveryDone: false
+};
+
+let timerInterval = null;
+let recoveryInterval = null;
+const triggeredMinutes = new Set();
+const validatedMinutes = new Set();
+
+// build the 6 minute rows up-front (greyed out until reached)
+const minuteRowsEl = document.getElementById('minuteRows');
+for(let m=1; m<=6; m++){
+  const row = document.createElement('div');
+  row.className = 'minute-row';
+  row.id = 'minrow-'+m;
+  row.innerHTML = `
+    <div class="minute-head" data-m="${m}">
+      <div class="mtitle">Minute ${m}</div>
+      <div class="msummary" id="minsum-${m}">—</div>
+    </div>
+    <div class="minute-body" id="minbody-${m}">
+      <div class="wheel-group">
+        <div class="wheel-unit"><div class="wlabel">FC</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-min-fc-${m}"></div></div></div>
+        <div class="wheel-unit"><div class="wlabel">SpO₂</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-min-spo2-${m}"></div></div></div>
+      </div>
+      <button class="btn btn-sm" style="width:100%;margin-top:8px;" data-validate="${m}">Valider minute ${m}</button>
+    </div>
+  `;
+  minuteRowsEl.appendChild(row);
+  row.querySelector('.minute-head').addEventListener('click', ()=>{
+    if(!row.classList.contains('reached')) return;
+    document.getElementById('minbody-'+m).classList.toggle('open');
+  });
+}
+
+function prevMinuteValues(m){
+  if(m===1) return {fc: state.pretest.fc, spo2: state.pretest.spo2};
+  const prev = state.minutes[m-1];
+  return prev ? {fc:prev.fc, spo2:prev.spo2} : {fc: state.pretest.fc, spo2: state.pretest.spo2};
+}
+
+function activateMinute(m){
+  if(triggeredMinutes.has(m)) return;
+  triggeredMinutes.add(m);
+  const row = document.getElementById('minrow-'+m);
+  row.classList.add('reached','due');
+  const body = document.getElementById('minbody-'+m);
+  body.classList.add('open');
+  const prevVals = prevMinuteValues(m);
+  const wfc = buildWheel('w-min-fc-'+m, 30, 220, 1, prevVals.fc || 80);
+  const wspo2 = buildWheel('w-min-spo2-'+m, 50, 100, 1, prevVals.spo2 || 96);
+  row.dataset.wfcRef = m; // not used directly, wheels stored in closures via DOM lookup at validate time
+  row._wheels = {fc:wfc, spo2:wspo2};
+  vibrate([90,40,90]);
+  row.scrollIntoView({behavior:'smooth', block:'center'});
+  setTimeout(()=> row.classList.remove('due'), 2200);
+}
+
+minuteRowsEl.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-validate]');
+  if(!btn) return;
+  const m = parseInt(btn.dataset.validate);
+  const row = document.getElementById('minrow-'+m);
+  const wheels = row._wheels;
+  if(!wheels) return;
+  const fc = wheels.fc.getValue();
+  const spo2 = wheels.spo2.getValue();
+  state.minutes[m] = {fc, spo2};
+  validatedMinutes.add(m);
+  document.getElementById('minsum-'+m).innerHTML = `FC ${fc} · SpO₂ ${spo2}% <span class="check-badge">✓</span>`;
+  row.classList.add('validated');
+  document.getElementById('minbody-'+m).classList.remove('open');
+  vibrate(40);
+});
+
+// ---------------- SCREEN 1 -> START TEST ----------------
+document.getElementById('btnStartTest').addEventListener('click', ()=>{
+  state.pretest.fc = wPreFc.getValue();
+  state.pretest.spo2 = wPreSpo2.getValue();
+  state.pretest.tas = wPreTas.getValue();
+  state.pretest.tad = wPreTad.getValue();
+
+  state.testStartTs = Date.now();
+  requestWake();
+  showScreen('screen-running');
+  vibrate(120);
+
+  timerInterval = setInterval(()=>{
+    if(!state.isPaused){
+      state.elapsedSec = Math.floor((Date.now() - state.testStartTs)/1000) - pausedTotalSec();
+    }
+    document.getElementById('timerDisplay').textContent = fmtTime(state.elapsedSec);
+
+    // minute boundary triggers (1..6)
+    const minuteHit = Math.floor(state.elapsedSec/60);
+    if(minuteHit>=1 && minuteHit<=6 && !triggeredMinutes.has(minuteHit)){
+      activateMinute(minuteHit);
+    }
+    // auto end at 6:00
+    if(state.elapsedSec>=360 && state.endedAtSec===null){
+      endTest(false);
+    }
+  }, 250);
+});
+
+function pausedTotalSec(){
+  let total = 0;
+  state.pauses.forEach(p=>{ total += (p.end? (p.end-p.start) : (Date.now()-p.start))/1000; });
+  return Math.floor(total);
+}
+
+// ---------------- PAUSE ----------------
+document.getElementById('btnPause').addEventListener('click', ()=>{
+  const topStatus = document.getElementById('topStatus');
+  const flag = document.getElementById('pauseFlag');
+  const btn = document.getElementById('btnPause');
+  if(!state.isPaused){
+    state.isPaused = true;
+    state.pauses.push({start: Date.now(), end:null});
+    topStatus.classList.add('paused');
+    flag.style.display='block';
+    btn.textContent='Reprendre';
+    vibrate([60,60,60]);
+  } else {
+    state.isPaused = false;
+    const last = state.pauses[state.pauses.length-1];
+    if(last) last.end = Date.now();
+    topStatus.classList.remove('paused');
+    flag.style.display='none';
+    btn.textContent='Pause';
+    vibrate(60);
+  }
+});
+// note: pause only visually flags the state; the timer interval keeps running and
+// elapsedSec keeps incrementing in real time regardless (per clinical requirement).
+// We intentionally do NOT subtract pause time from elapsedSec display below — see fix:
+</script>
+<script>
+// Correction: the spec says "le temps ne s'arrête pas" — the displayed timer must keep
+// running in real time during pause, it should NOT freeze and should NOT have paused
+// time subtracted. We only logged pauses for the record (to show in the final report).
+// Override pausedTotalSec to always return 0 so elapsedSec = pure real time elapsed.
+function pausedTotalSec(){ return 0; }
+</script>
+<script>
+// ---------------- DISTANCE ----------------
+function pauseOverlapMs(fromTs, toTs){
+  // sum of paused durations that overlap the [fromTs, toTs] interval
+  let total = 0;
+  state.pauses.forEach(p=>{
+    const pStart = p.start;
+    const pEnd = p.end || Date.now();
+    const overlapStart = Math.max(pStart, fromTs);
+    const overlapEnd = Math.min(pEnd, toTs);
+    if(overlapEnd > overlapStart) total += (overlapEnd - overlapStart);
+  });
+  return total;
+}
+
+function formatSpeed(ms){
+  if(ms===null || !isFinite(ms)) return '—';
+  return ms.toFixed(2)+' m/s';
+}
+
+document.getElementById('btnPlus25').addEventListener('click', ()=>{
+  const now = Date.now();
+  const lastTs = state.distanceLog.length ? state.distanceLog[state.distanceLog.length-1].ts : state.testStartTs;
+  const pauseMs = pauseOverlapMs(lastTs, now);
+  const segDurationSec = Math.max(0, (now - lastTs - pauseMs)/1000);
+  const speedMs = segDurationSec>0 ? (25/segDurationSec) : null;
+
+  state.distance += 25;
+  state.distanceLog.push({distance: state.distance, ts: now, segDurationSec, speedMs});
+
+  const num = document.getElementById('distanceNum');
+  num.textContent = state.distance;
+  num.classList.add('pulse');
+  setTimeout(()=>num.classList.remove('pulse'), 140);
+  vibrate(30);
+
+  document.getElementById('speedLive').textContent = speedMs!==null
+    ? `Vitesse sur ces 25 m : ${formatSpeed(speedMs)}`
+    : '—';
+});
+
+document.getElementById('btnMinus25').addEventListener('click', ()=>{
+  if(state.distance<=0) return;
+  state.distance = Math.max(0, state.distance - 25);
+  state.distanceLog.pop(); // remove the corresponding logged segment
+  document.getElementById('distanceNum').textContent = state.distance;
+  const prev = state.distanceLog[state.distanceLog.length-1];
+  document.getElementById('speedLive').textContent = prev && prev.speedMs!==null
+    ? `Vitesse sur ces 25 m : ${formatSpeed(prev.speedMs)}`
+    : '—';
+  vibrate(30);
+});
+
+// ---------------- STOP TEST (manual or auto) ----------------
+function endTest(manual){
+  if(state.endedAtSec !== null) return; // already ended
+  state.endedAtSec = state.elapsedSec;
+  state.stoppedEarly = state.endedAtSec < 355; // small tolerance
+  vibrate([150,80,150,80,150]);
+  clearInterval(timerInterval);
+
+  const badge = document.getElementById('stopBadge');
+  const motifCard = document.getElementById('motifCard');
+  if(state.stoppedEarly){
+    badge.innerHTML = `<div class="badge-warn">⚠ Test arrêté à ${fmtTime(state.endedAtSec)} (avant 6:00).</div>`;
+    motifCard.style.display='block';
+  } else {
+    badge.innerHTML = `<div class="badge-ok">Test mené à terme (6:00).</div>`;
+    motifCard.style.display='none';
+  }
+  showScreen('screen-recovery');
+
+  // IMPORTANT: the recovery/arrêt/recup wheels and the final-distance wheel were built
+  // at page load while this screen was still display:none — scrollTo has no effect on
+  // an unlaid-out element, so their internal scroll position never actually moved.
+  // Now that the screen is visible and laid out, re-apply the intended values.
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      wDistFinal.setValue(state.distance, false);
+      wArretFc.setValue(90, false);
+      wArretSpo2.setValue(95, false);
+      wArretTas.setValue(140, false);
+      wArretTad.setValue(80, false);
+      wRecupFc.setValue(85, false);
+      wRecupSpo2.setValue(96, false);
+      wRecupTas.setValue(130, false);
+      wRecupTad.setValue(80, false);
+    }, 30);
+  });
+}
+
+document.getElementById('btnStopTest').addEventListener('click', ()=> endTest(true));
+
+// ---------------- RECOVERY ----------------
+document.getElementById('btnPatientAssis').addEventListener('click', (e)=>{
+  state.recoveryStartTs = Date.now();
+  document.getElementById('recoveryTimerWrap').style.display='block';
+  e.target.disabled = true;
+  e.target.style.opacity = 0.5;
+  vibrate(80);
+
+  recoveryInterval = setInterval(()=>{
+    state.recoveryElapsedSec = Math.floor((Date.now()-state.recoveryStartTs)/1000);
+    document.getElementById('recoveryTimerDisplay').textContent = fmtTime(state.recoveryElapsedSec);
+    if(state.recoveryElapsedSec>=180 && !state.recoveryDone){
+      state.recoveryDone = true;
+      vibrate([150,80,150]);
+    }
+  }, 250);
+});
+
+// ---------------- FINISH -> RESULTS ----------------
+function captureFinalSnapshot(){
+  return {
+    distFinal: wDistFinal.getValue(),
+    arret: {fc:wArretFc.getValue(), spo2:wArretSpo2.getValue(), tas:wArretTas.getValue(), tad:wArretTad.getValue()},
+    recup: {fc:wRecupFc.getValue(), spo2:wRecupSpo2.getValue(), tas:wRecupTas.getValue(), tad:wRecupTad.getValue()}
+  };
+}
+
+function buildReport(snap){
+  const nom = document.getElementById('nom').value || 'Patient';
+  const date = document.getElementById('dateTest').value || '';
+  const sexe = document.getElementById('sexe').value==='h'?'masculin':'féminin';
+  const age = document.getElementById('age').value || 'NR';
+  const poids = document.getElementById('poids').value || 'NR';
+  const taille = document.getElementById('taille').value || 'NR';
+
+  const motif = document.getElementById('motifArret').value.trim();
+  const distFinal = snap.distFinal;
+  const arret = snap.arret;
+  const recup = snap.recup;
+
+  const aideTechOui = document.getElementById('aideTech').value==='oui';
+  const aideTechPrec = document.getElementById('aideTechPrec').value.trim();
+  const o2Oui = document.getElementById('o2').value==='oui';
+  const o2Prec = document.getElementById('o2Prec').value.trim();
+  const incidents = document.getElementById('incidents').value.trim();
+
+  const avgSpeedMs = (state.endedAtSec>0) ? (distFinal/state.endedAtSec) : null;
+  const segSpeeds = state.distanceLog.map(e=>e.speedMs).filter(v=>v!==null && isFinite(v));
+  const segAvg = segSpeeds.length ? segSpeeds.reduce((a,b)=>a+b,0)/segSpeeds.length : null;
+  const segMin = segSpeeds.length ? Math.min(...segSpeeds) : null;
+  const segMax = segSpeeds.length ? Math.max(...segSpeeds) : null;
+
+  const L = [];
+  L.push('TEST DE MARCHE DE 6 MINUTES — SAISIE EN DIRECT');
+  L.push(`${nom}  —  ${date}`);
+  L.push(`Sexe ${sexe} · Âge ${age} ans · Poids ${poids} kg · Taille ${taille} cm`);
+  L.push('');
+  L.push('━━━ RÉSULTAT ━━━');
+  if(state.stoppedEarly){
+    L.push(`/!\\ ARRÊT ANTICIPÉ à ${fmtTime(state.endedAtSec)}${motif? ' — motif : '+motif : ''}`);
+  } else {
+    L.push(`Test mené à terme (6:00).`);
+  }
+  L.push(`Distance parcourue : ${distFinal} m  (total +25m comptés : ${state.distance} m)`);
+  if(avgSpeedMs!==null) L.push(`Vitesse moyenne sur le test : ${formatSpeed(avgSpeedMs)}`);
+  if(segAvg!==null) L.push(`Vitesse par tranche de 25 m : moyenne ${formatSpeed(segAvg)} (min ${formatSpeed(segMin)} – max ${formatSpeed(segMax)})`);
+  if(state.pauses.length){
+    const totalPause = state.pauses.reduce((s,p)=> s + ((p.end||Date.now())-p.start), 0)/1000;
+    L.push(`Pauses : ${state.pauses.length} (durée cumulée ≈ ${Math.round(totalPause)}s) — non déduites du temps de test, mais exclues du calcul de vitesse par tranche.`);
+  }
+  L.push('');
+  L.push('━━━ MESURES PRÉ-TEST ━━━');
+  L.push(`FC ${state.pretest.fc} bpm · SpO₂ ${state.pretest.spo2}% · TA ${state.pretest.tas}/${state.pretest.tad} mmHg`);
+  L.push('');
+  L.push('━━━ SURVEILLANCE PAR MINUTE ━━━');
+  for(let m=1; m<=6; m++){
+    if(state.minutes[m]){
+      L.push(`Minute ${m} : FC ${state.minutes[m].fc} bpm · SpO₂ ${state.minutes[m].spo2}%`);
+    } else {
+      L.push(`Minute ${m} : non renseignée`);
+    }
+  }
+  L.push('');
+  L.push('━━━ MESURES À L\'ARRÊT ━━━');
+  L.push(`FC ${arret.fc} bpm · SpO₂ ${arret.spo2}% · TA ${arret.tas}/${arret.tad} mmHg`);
+  L.push('');
+  L.push('━━━ MESURES À +3 MIN DE REPOS ━━━');
+  L.push(`FC ${recup.fc} bpm · SpO₂ ${recup.spo2}% · TA ${recup.tas}/${recup.tad} mmHg`);
+  L.push('');
+  L.push('━━━ CONDITIONS ━━━');
+  L.push(`Aide technique : ${aideTechOui ? (aideTechPrec || 'oui, non précisée') : 'aucune'}`);
+  L.push(`Oxygénothérapie d'appoint : ${o2Oui ? (o2Prec || 'oui, non précisée') : 'aucune'}`);
+  if(incidents) L.push(`Incidents / remarques : ${incidents}`);
+  L.push('');
+  L.push('À reporter dans l\'outil TDM6 (saisie/interprétation) pour générer le compte-rendu final et le graphique détaillé.');
+
+  return L.join('\n');
+}
+
+// ---------------- RESULT CHART ----------------
+function drawResultChart(snap){
+  const svg = document.getElementById('resultChart');
+  const arretFc = snap.arret.fc, arretSpo2 = snap.arret.spo2;
+  const recupFc = snap.recup.fc, recupSpo2 = snap.recup.spo2;
+  const endedAt = state.endedAtSec || 0;
+
+  // points for panel A (time, spo2, fc)
+  const points = [];
+  if(state.pretest.spo2!==null) points.push({t:0, spo2:state.pretest.spo2, fc:state.pretest.fc});
+  for(let m=1;m<=6;m++){ if(state.minutes[m]) points.push({t:m*60, spo2:state.minutes[m].spo2, fc:state.minutes[m].fc}); }
+  points.push({t:endedAt, spo2:arretSpo2, fc:arretFc, isArret:true});
+  points.push({t:endedAt+180, spo2:recupSpo2, fc:recupFc, isRecup:true});
+
+  const totalT = Math.max(endedAt+180, 60);
+  const W=380, padL=38, padR=14;
+  const plotW = W-padL-padR;
+  const xFor = t => padL + (t/totalT)*plotW;
+
+  // --- Panel A: SpO2 (left axis) / FC (right axis) ---
+  const aTop=22, aH=170, aBottom=aTop+aH;
+  const spVals = points.map(p=>p.spo2).filter(v=>v!==null && v!==undefined);
+  const fcVals = points.map(p=>p.fc).filter(v=>v!==null && v!==undefined);
+  let spMin=80, spMax=100;
+  if(spVals.length){
+    spMin = Math.floor((Math.min(...spVals)-10)/5)*5;
+    if(spMin<0) spMin=0; if(spMin>90) spMin=90;
+  }
+  const spStep = (spMax-spMin)<=20 ? 5 : 10;
+  const fcMin = fcVals.length? Math.max(0, Math.floor(Math.min(...fcVals)/10)*10-10) : 40;
+  const fcMax = fcVals.length? Math.ceil(Math.max(...fcVals)/10)*10+10 : 180;
+  const yForSp = v => aTop + aH - ((v-spMin)/(spMax-spMin))*aH;
+  const yForFc = v => aTop + aH - ((v-fcMin)/(fcMax-fcMin))*aH;
+
+  let s = `<rect x="0" y="0" width="380" height="420" fill="#fffdf9"/>`;
+
+  for(let g=spMin; g<=spMax; g+=spStep){
+    const y=yForSp(g);
+    s += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#e6e0d4" stroke-width="1"/>`;
+    s += `<text x="${padL-5}" y="${y+3}" font-size="8.5" fill="#2f4d3a" text-anchor="end" font-family="monospace">${g}</text>`;
+  }
+  for(let g=fcMin; g<=fcMax; g+=20){
+    const y=yForFc(g);
+    s += `<text x="${W-padR+4}" y="${y+3}" font-size="8.5" fill="#7a3b2e" text-anchor="start" font-family="monospace">${g}</text>`;
+  }
+  // x labels (minutes)
+  for(let m=0;m*60<=endedAt;m++){
+    const x = xFor(m*60);
+    s += `<text x="${x}" y="${aBottom+12}" font-size="8" fill="#5b6a60" text-anchor="middle" font-family="sans-serif">${m}'</text>`;
+  }
+  s += `<text x="${xFor(endedAt+180)}" y="${aBottom+12}" font-size="8" fill="#5b6a60" text-anchor="middle" font-family="sans-serif">+3'</text>`;
+
+  // lines: split at arret->recup as dashed gap (time discontinuity), rest solid
+  function buildLine(key, yFn){
+    let main='', gap='';
+    for(let i=0;i<points.length;i++){
+      const p = points[i];
+      if(p[key]===null || p[key]===undefined) continue;
+      const x = xFor(p.t), y = yFn(p[key]);
+      if(p.isRecup){
+        // connect from previous valid point as dashed
+        for(let j=i-1;j>=0;j--){
+          if(points[j][key]!==null && points[j][key]!==undefined){
+            gap = `M${xFor(points[j].t)} ${yFn(points[j][key])} L${x} ${y}`;
+            break;
+          }
+        }
+      } else {
+        main += (main===''?'M':'L') + x + ' ' + y + ' ';
+      }
+    }
+    return {main, gap};
+  }
+  const spSeg = buildLine('spo2', yForSp);
+  const fcSeg = buildLine('fc', yForFc);
+  if(spSeg.main) s += `<path d="${spSeg.main}" fill="none" stroke="#2f4d3a" stroke-width="2"/>`;
+  if(spSeg.gap) s += `<path d="${spSeg.gap}" fill="none" stroke="#2f4d3a" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.6"/>`;
+  if(fcSeg.main) s += `<path d="${fcSeg.main}" fill="none" stroke="#a8431f" stroke-width="2" stroke-dasharray="5,3"/>`;
+  if(fcSeg.gap) s += `<path d="${fcSeg.gap}" fill="none" stroke="#a8431f" stroke-width="1.3" stroke-dasharray="2,3" opacity="0.6"/>`;
+  points.forEach(p=>{
+    if(p.spo2!==null && p.spo2!==undefined) s += `<circle cx="${xFor(p.t)}" cy="${yForSp(p.spo2)}" r="3" fill="#2f4d3a"/>`;
+    if(p.fc!==null && p.fc!==undefined) s += `<circle cx="${xFor(p.t)}" cy="${yForFc(p.fc)}" r="3" fill="#a8431f"/>`;
+  });
+  s += `<rect x="${padL}" y="4" width="9" height="3" fill="#2f4d3a"/><text x="${padL+13}" y="9" font-size="8.5" fill="#2f4d3a" font-family="sans-serif">SpO₂</text>`;
+  s += `<rect x="${padL+50}" y="4" width="9" height="3" fill="#a8431f"/><text x="${padL+63}" y="9" font-size="8.5" fill="#a8431f" font-family="sans-serif">FC</text>`;
+
+  // --- Panel B: walking speed per 25m segment ---
+  const bTop=aBottom+34, bH=110, bBottom=bTop+bH;
+  const speeds = state.distanceLog.map(e=>e.speedMs).filter(v=>v!==null && isFinite(v));
+  let spdMax = speeds.length? Math.ceil(Math.max(...speeds)*4)/4 : 1.5;
+  if(spdMax<1) spdMax=1;
+  const yForSpd = v => bTop + bH - (v/spdMax)*bH;
+
+  s += `<text x="${padL}" y="${bTop-10}" font-size="8.5" fill="#2f4d3a" font-family="sans-serif" font-weight="bold">Vitesse par tranche de 25 m (m/s)</text>`;
+  const spdStep = spdMax<=1.5 ? 0.25 : (spdMax<=3 ? 0.5 : 1);
+  for(let g=0; g<=spdMax+0.001; g+=spdStep){
+    const y = yForSpd(g);
+    s += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#e6e0d4" stroke-width="1"/>`;
+    s += `<text x="${padL-5}" y="${y+3}" font-size="7.5" fill="#5b6a60" text-anchor="end" font-family="monospace">${Math.round(g*100)/100}</text>`;
+  }
+
+  state.distanceLog.forEach((entry,i)=>{
+    if(entry.speedMs===null || !isFinite(entry.speedMs)) return;
+    const tStart = ((i===0? state.testStartTs : state.distanceLog[i-1].ts) - state.testStartTs)/1000;
+    const tEnd = (entry.ts - state.testStartTs)/1000;
+    const x1 = xFor(Math.max(0,tStart)), x2 = xFor(Math.min(endedAt,tEnd));
+    const w = Math.max(1.5, x2-x1-1);
+    const y = yForSpd(entry.speedMs);
+    const h = bBottom - y;
+    s += `<rect x="${x1}" y="${y}" width="${w}" height="${h}" fill="#c98a3c"/>`;
+  });
+  // x time axis for panel B too
+  for(let m=0;m*60<=endedAt;m++){
+    const x = xFor(m*60);
+    s += `<text x="${x}" y="${bBottom+12}" font-size="8" fill="#5b6a60" text-anchor="middle" font-family="sans-serif">${m}'</text>`;
+  }
+
+  svg.innerHTML = s;
+}
+
+// ---------------- CHART TO PNG / COPY ----------------
+async function chartToPngBlob(){
+  const svgEl = document.getElementById('resultChart');
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(svgEl);
+  if(!svgStr.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
+    svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const blob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+  const scale=2;
+  const canvas = document.createElement('canvas');
+  canvas.width=380*scale; canvas.height=420*scale;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#fffdf9'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(scale,scale);
+  ctx.drawImage(img,0,0,380,420);
+  URL.revokeObjectURL(url);
+  return new Promise(r=>canvas.toBlob(r,'image/png'));
+}
+function blobToDataURL(blob){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+
+document.getElementById('btnFinish').addEventListener('click', ()=>{
+  clearInterval(recoveryInterval);
+  releaseWake();
+  const snap = captureFinalSnapshot(); // capture wheel values WHILE screen-recovery is still visible
+  document.getElementById('clinical-text').value = buildReport(snap);
+  showScreen('screen-results');
+  requestAnimationFrame(()=> drawResultChart(snap));
+});
+
+async function copyReport(includeChart, fb){
+  const text = document.getElementById('clinical-text').value;
+  try{
+    let imageDataUrl=null;
+    if(includeChart){
+      try{ const b=await chartToPngBlob(); imageDataUrl = await blobToDataURL(b); }catch(e){ imageDataUrl=null; }
+    }
+    if(imageDataUrl || !includeChart){
+      const escapeHtml = s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const linesHtml = text.split('\n').map(l=> l===''? '&nbsp;' : escapeHtml(l)).join('<br>');
+      let html = `<div style="font-family:'Courier New',Consolas,monospace;font-size:12px;line-height:1.5;">${linesHtml}</div>`;
+      if(imageDataUrl) html += `<br><img src="${imageDataUrl}" style="max-width:380px;">`;
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html],{type:'text/html'}),
+        'text/plain': new Blob([text],{type:'text/plain'})
+      })]);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+    fb.textContent = includeChart? 'Copié ✓ (texte + graphique)' : 'Copié ✓';
+  }catch(e){
+    try{
+      const ta = document.getElementById('clinical-text');
+      ta.select();
+      document.execCommand('copy');
+      fb.textContent = 'Copié ✓';
+    }catch(e2){ fb.textContent = 'Erreur lors de la copie'; }
+  }
+  fb.classList.add('show');
+  setTimeout(()=>fb.classList.remove('show'), 2000);
+}
+
+document.getElementById('btnCopy').addEventListener('click', ()=> copyReport(false, document.getElementById('copyFeedback')));
+document.getElementById('btnCopyAll').addEventListener('click', ()=> copyReport(true, document.getElementById('copyAllFeedback')));
+
+document.getElementById('btnCopyChart').addEventListener('click', async ()=>{
+  const fb = document.getElementById('copyChartFeedback');
+  try{
+    const blob = await chartToPngBlob();
+    await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+    fb.textContent='Copié ✓';
+  }catch(e){
+    fb.textContent="Copie image non supportée par ce navigateur";
+  }
+  fb.classList.add('show');
+  setTimeout(()=>fb.classList.remove('show'), 2000);
+});
+
+document.getElementById('btnNewTest').addEventListener('click', ()=>{
+  window.location.reload();
+});
+</script>
+</body>
+</html>
