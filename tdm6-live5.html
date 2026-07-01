@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>TDM6 — Test en direct</title>
+<style>
+  :root{
+    --paper:#f6f3ee;
+    --ink:#1f2a24;
+    --line:#cfc6b8;
+    --accent:#7a3b2e;
+    --accent-soft:#e8d9cf;
+    --track:#2f4d3a;
+    --track-soft:#dde6df;
+    --warn:#a8431f;
+    --good:#2f6b4f;
+    --mono: "JetBrains Mono","SF Mono",Consolas,monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family: -apple-system, "Trebuchet MS", Helvetica, Arial, sans-serif;
+    overscroll-behavior:none;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .screen{display:none; min-height:100vh; padding:16px 14px 100px;}
+  .screen.active{display:block;}
+
+  h1{
+    font-size:1.15rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    border-bottom:2.5px solid var(--track);
+    padding-bottom:8px;
+    margin:4px 0 14px;
+  }
+  h2{
+    font-size:0.78rem;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    color:var(--accent);
+    margin:18px 0 8px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:4px;
+  }
+  .card{
+    background:#fffdf9;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px;
+    margin-bottom:12px;
+  }
+  label{
+    display:block;
+    font-size:0.68rem;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+    color:#5b6a60;
+    margin-bottom:4px;
+  }
+  input[type=text]{
+    width:100%;
+    padding:10px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-size:1rem;
+    color:var(--ink);
+  }
+  select{
+    width:100%;
+    padding:10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-size:1rem;
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+
+  .btn{
+    font-family:inherit;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    font-weight:700;
+    font-size:0.85rem;
+    padding:14px 18px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:var(--track);
+    color:#fff;
+    width:100%;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .btn:active{background:#23392c;}
+  .btn-outline{background:transparent;border:1.5px solid var(--track);color:var(--track);}
+  .btn-outline:active{background:var(--track-soft);}
+  .btn-warn{background:var(--warn);}
+  .btn-warn:active{background:#7e3015;}
+  .btn-sm{padding:9px 12px;font-size:0.75rem;width:auto;}
+  .btn-giant{
+    font-size:1.3rem;
+    padding:28px 18px;
+    border-radius:14px;
+  }
+  .stack{display:flex;flex-direction:column;gap:10px;}
+  .row{display:flex;gap:10px;align-items:center;}
+
+  /* ---- Wheel picker ---- */
+  .wheel-group{display:flex;gap:10px;justify-content:center;margin:6px 0;}
+  .wheel-unit{text-align:center;}
+  .wheel-unit .wlabel{font-size:0.65rem;text-transform:uppercase;letter-spacing:0.4px;color:#5b6a60;margin-bottom:4px;}
+  .wheel{
+    position:relative;
+    width:84px;
+    height:132px;
+    overflow-y:scroll;
+    scroll-snap-type:y mandatory;
+    border:1.5px solid var(--track);
+    border-radius:8px;
+    background:#fff;
+    -webkit-overflow-scrolling:touch;
+  }
+  .wheel::-webkit-scrollbar{display:none;}
+  .wheel-item{
+    height:44px;
+    line-height:44px;
+    text-align:center;
+    font-family:var(--mono);
+    font-size:1.2rem;
+    scroll-snap-align:center;
+    color:#aaa49a;
+  }
+  .wheel-item.center-val{color:var(--ink);font-weight:700;}
+  .wheel-pad{height:44px;}
+  .wheel-frame{
+    position:absolute;
+    top:44px;
+    left:0; right:0;
+    height:44px;
+    border-top:1.5px solid var(--accent);
+    border-bottom:1.5px solid var(--accent);
+    pointer-events:none;
+    background:rgba(122,59,46,0.06);
+  }
+  .wheel-wrap{position:relative;}
+
+  /* ---- Running screen ---- */
+  .top-status{
+    position:sticky;
+    top:0;
+    z-index:30;
+    background:var(--track);
+    color:#fff;
+    border-radius:0 0 10px 10px;
+    padding:12px 16px;
+    margin:-16px -14px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .top-status.paused{background:#b5601f;animation:pausePulse 1.1s ease-in-out infinite;}
+  @keyframes pausePulse{0%,100%{background:#b5601f;}50%{background:#8a4614;}}
+  .timer{font-family:var(--mono);font-size:1.7rem;font-weight:700;}
+  .timer small{font-size:0.85rem;font-weight:400;opacity:0.85;}
+  .pause-flag{font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;font-weight:700;display:flex;align-items:center;gap:5px;}
+  .pause-flag .dot{width:9px;height:9px;border-radius:50%;background:#fff;animation:blink 0.9s step-start infinite;}
+  @keyframes blink{50%{opacity:0.15;}}
+
+  /* fixed minute-capture overlay: never shifts the page */
+  .capture-overlay{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    z-index:60;
+    background:#fffdf9;
+    border-top:3px solid var(--warn);
+    border-radius:14px 14px 0 0;
+    box-shadow:0 -6px 20px rgba(0,0,0,0.18);
+    padding:14px 16px calc(16px + env(safe-area-inset-bottom));
+    transform:translateY(110%);
+    transition:transform 0.28s cubic-bezier(.2,.8,.2,1);
+  }
+  .capture-overlay.show{transform:translateY(0);}
+  .capture-overlay h3{
+    margin:0 0 8px;
+    font-size:0.95rem;
+    color:var(--warn);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .capture-overlay .prevhint{font-size:0.7rem;color:#8a8275;font-weight:400;text-transform:none;letter-spacing:0;}
+
+  .distance-big{
+    text-align:center;
+    margin:10px 0 16px;
+  }
+  .distance-big .num{
+    font-family:var(--mono);
+    font-size:3rem;
+    font-weight:700;
+    color:var(--track);
+    transition:transform 0.12s;
+  }
+  .distance-big .num.pulse{transform:scale(1.12);}
+  .distance-big .unit{font-size:1rem;color:#5b6a60;}
+  .distance-big .speed-live{
+    font-family:var(--mono);
+    font-size:0.95rem;
+    color:var(--accent);
+    margin-top:4px;
+  }
+  .speed-trend{
+    font-size:1.4rem;
+    font-weight:700;
+    margin-top:2px;
+    min-height:1.5rem;
+  }
+  .speed-trend.up{color:var(--good);}
+  .speed-trend.down{color:var(--warn);}
+  .speed-trend.flat{color:#8a8275;}
+
+  .minus-row{text-align:center;margin-bottom:8px;}
+
+  .minute-row{
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    margin-bottom:8px;
+    background:#fffdf9;
+    opacity:0.4;
+    pointer-events:none;
+  }
+  .minute-row.reached{opacity:1;pointer-events:auto;}
+  .minute-row.due{
+    border-color:var(--warn);
+    box-shadow:0 0 0 3px rgba(168,67,31,0.15);
+    animation:pulse-border 1s ease-in-out 2;
+  }
+  @keyframes pulse-border{
+    0%,100%{box-shadow:0 0 0 3px rgba(168,67,31,0.15);}
+    50%{box-shadow:0 0 0 6px rgba(168,67,31,0.3);}
+  }
+  .minute-row.validated{opacity:1;background:var(--track-soft);}
+  .minute-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    cursor:pointer;
+  }
+  .minute-head .mtitle{font-weight:700;font-size:0.95rem;}
+  .minute-head .msummary{font-family:var(--mono);font-size:0.85rem;color:var(--track);}
+  .minute-body{display:none;margin-top:10px;}
+  .minute-body.open{display:block;}
+  .check-badge{
+    display:inline-block;
+    width:18px;height:18px;
+    border-radius:50%;
+    background:var(--good);
+    color:#fff;
+    text-align:center;
+    line-height:18px;
+    font-size:11px;
+  }
+
+  .note{font-size:0.7rem;color:#8a8275;line-height:1.5;margin-top:4px;}
+
+  #clinical-text{
+    width:100%;
+    min-height:300px;
+    font-family:var(--mono);
+    font-size:0.78rem;
+    line-height:1.5;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fffefb;
+    white-space:pre-wrap;
+  }
+  .copy-feedback{
+    font-size:0.74rem;
+    color:var(--good);
+    text-align:center;
+    opacity:0;
+    transition:opacity 0.3s;
+    margin-top:6px;
+  }
+  .copy-feedback.show{opacity:1;}
+
+  .badge-warn{
+    background:#f7e7df;
+    color:var(--warn);
+    border:1px solid var(--warn);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:0.82rem;
+    margin-bottom:10px;
+  }
+  .badge-ok{
+    background:#e3ede6;
+    color:var(--good);
+    border:1px solid var(--good);
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:0.82rem;
+    margin-bottom:10px;
+  }
+  #resultChart{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:6px;}
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN 1: IDENTITY + PRETEST ============ -->
+<div class="screen active" id="screen-pretest">
+  <h1>TDM6 — Test en direct</h1>
+  <p class="note" style="margin-top:-6px;margin-bottom:14px;">Version 1 · Développé par Sébastien Thorent</p>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Identité</h2>
+    <div class="grid2">
+      <div>
+        <label for="nom">Patient (initiales)</label>
+        <input type="text" id="nom" placeholder="ex. M. D.">
+      </div>
+      <div>
+        <label for="dateTest">Date</label>
+        <input type="text" id="dateTest">
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:10px;">
+      <div>
+        <label for="sexe">Sexe</label>
+        <select id="sexe"><option value="h">Homme</option><option value="f">Femme</option></select>
+      </div>
+      <div>
+        <label for="age">Âge</label>
+        <input type="text" id="age" inputmode="numeric" placeholder="ans">
+      </div>
+      <div>
+        <label for="poids">Poids</label>
+        <input type="text" id="poids" inputmode="numeric" placeholder="kg">
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:10px;">
+      <div>
+        <label for="taille">Taille</label>
+        <input type="text" id="taille" inputmode="numeric" placeholder="cm">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Mesures pré-test (dans l'ordre que vous voulez)</h2>
+    <div class="wheel-group">
+      <div class="wheel-unit">
+        <div class="wlabel">FC (bpm)</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-fc"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">SpO₂ (%)</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-spo2"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">TA sys.</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-tas"></div></div>
+      </div>
+      <div class="wheel-unit">
+        <div class="wlabel">TA dia.</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-pre-tad"></div></div>
+      </div>
+    </div>
+    <p class="note">Faites défiler chaque roulette jusqu'à la valeur encadrée au centre.</p>
+  </div>
+
+  <button class="btn btn-giant" id="btnStartTest">Patient prêt — Top, démarrer</button>
+</div>
+
+<!-- ============ SCREEN 2: RUNNING TEST ============ -->
+<div class="screen" id="screen-running">
+  <div class="top-status" id="topStatus">
+    <div class="timer"><span id="timerDisplay">00:00</span> <small>/ 6:00</small></div>
+    <div class="pause-flag" id="pauseFlag" style="display:none;"><span class="dot"></span> EN PAUSE</div>
+    <button class="btn btn-sm btn-outline" id="btnPause" style="background:#fff;width:auto;">Pause</button>
+  </div>
+
+  <div class="distance-big">
+    <div class="num" id="distanceNum">0</div>
+    <div class="unit">mètres parcourus</div>
+    <div class="speed-live" id="speedLive">—</div>
+    <div class="speed-trend" id="speedTrend"></div>
+  </div>
+
+  <button class="btn btn-giant" id="btnPlus25">+ 25 m</button>
+  <div class="minus-row">
+    <button class="btn btn-sm btn-outline" id="btnMinus25">− 25 m (correction)</button>
+  </div>
+
+  <h2>Relevés par minute</h2>
+  <div id="minuteRows"></div>
+
+  <button class="btn btn-warn" id="btnStopTest" style="margin-top:14px;">⏹ Terminer le test</button>
+
+  <!-- fixed capture overlay for the current minute -->
+  <div class="capture-overlay" id="captureOverlay">
+    <h3><span id="captureTitle">Minute —</span><span class="prevhint" id="capturePrevHint"></span></h3>
+    <div class="wheel-group">
+      <div class="wheel-unit"><div class="wlabel">FC (bpm)</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-capture-fc"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">SpO₂ (%)</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-capture-spo2"></div></div></div>
+    </div>
+    <button class="btn" id="btnValidateCapture" style="margin-top:10px;">Valider</button>
+  </div>
+</div>
+
+<!-- ============ SCREEN 3: RECOVERY / POST-TEST ============ -->
+<div class="screen" id="screen-recovery">
+  <h1>Fin du test</h1>
+  <div id="stopBadge"></div>
+
+  <div class="card" id="motifCard" style="display:none;">
+    <label for="motifArret">Motif de l'arrêt anticipé</label>
+    <input type="text" id="motifArret" placeholder="ex. dyspnée, fatigue, douleur...">
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Distance finale</h2>
+    <div class="wheel-group">
+      <div class="wheel-unit">
+        <div class="wlabel">Mètres</div>
+        <div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-distfinal"></div></div>
+      </div>
+    </div>
+    <p class="note">Pré-rempli avec le total des +25 m ; ajustez si besoin.</p>
+  </div>
+
+  <button class="btn" id="btnPatientAssis">Patient assis — démarrer les 3 min de repos</button>
+  <div id="recoveryTimerWrap" style="display:none;margin-top:10px;text-align:center;">
+    <div class="timer" style="color:var(--track);"><span id="recoveryTimerDisplay">00:00</span> <small>/ 3:00</small></div>
+  </div>
+
+  <h2>Mesures à l'arrêt (= fin de marche)</h2>
+  <div class="card">
+    <p class="note" style="margin-top:0;margin-bottom:8px;">FC et SpO₂ pré-remplies avec la dernière minute relevée ; ajustez si besoin. Complétez la TA prise à l'arrêt.</p>
+    <div class="wheel-group">
+      <div class="wheel-unit"><div class="wlabel">FC</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-fc"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">SpO₂</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-spo2"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA sys.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-tas"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA dia.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-arret-tad"></div></div></div>
+    </div>
+  </div>
+
+  <h2>FC à +1 min de repos (optionnel — HRR1)</h2>
+  <div class="card">
+    <div class="row" style="margin-bottom:8px;">
+      <label style="margin:0;flex:1;">Renseigner la FC à +1 min ?</label>
+      <select id="hrr1Enabled" style="width:auto;"><option value="non">Non</option><option value="oui">Oui</option></select>
+    </div>
+    <div id="hrr1Wrap" style="display:none;">
+      <p class="note" style="margin-top:0;margin-bottom:8px;">Seul point de récupération avec des seuils pronostiques publiés. FC prise 1 min après l'arrêt.</p>
+      <div class="wheel-group">
+        <div class="wheel-unit"><div class="wlabel">FC +1min</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-hrr1-fc"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Mesures à +3 min de repos</h2>
+  <div class="card">
+    <div class="wheel-group">
+      <div class="wheel-unit"><div class="wlabel">FC</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-fc"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">SpO₂</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-spo2"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA sys.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-tas"></div></div></div>
+      <div class="wheel-unit"><div class="wlabel">TA dia.</div><div class="wheel-wrap"><div class="wheel-frame"></div><div class="wheel" id="w-recup-tad"></div></div></div>
+    </div>
+  </div>
+
+  <h2>Conditions</h2>
+  <div class="card stack">
+    <div class="row">
+      <label style="margin:0;flex:1;">Aide technique</label>
+      <select id="aideTech" style="width:auto;"><option value="non">Non</option><option value="oui">Oui</option></select>
+    </div>
+    <input type="text" id="aideTechPrec" placeholder="préciser (déambulateur, canne...)">
+    <div class="row">
+      <label style="margin:0;flex:1;">Oxygénothérapie</label>
+      <select id="o2" style="width:auto;"><option value="non">Non</option><option value="oui">Oui</option></select>
+    </div>
+    <input type="text" id="o2Prec" placeholder="préciser (débit, dispositif...)">
+    <label for="incidents" style="margin-top:6px;">Incidents / remarques</label>
+    <input type="text" id="incidents" placeholder="texte libre">
+  </div>
+
+  <button class="btn btn-giant" id="btnFinish" style="margin-top:16px;">Voir toutes les données</button>
+</div>
+
+<!-- ============ SCREEN 4: RESULTS ============ -->
+<div class="screen" id="screen-results">
+  <h1>Résultat complet</h1>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Graphique</h2>
+    <svg id="resultChart" viewBox="0 0 380 300" xmlns="http://www.w3.org/2000/svg"></svg>
+    <button class="btn btn-outline" id="btnCopyChart" style="margin-top:10px;">Copier / partager le graphique</button>
+    <div class="copy-feedback" id="copyChartFeedback">Copié ✓</div>
+  </div>
+
+  <div class="card">
+    <textarea id="clinical-text" readonly></textarea>
+    <button class="btn" id="btnCopy" style="margin-top:10px;">Copier le texte</button>
+    <button class="btn" id="btnCopyAll" style="margin-top:8px;">Copier texte + graphique</button>
+    <div class="copy-feedback" id="copyFeedback">Copié ✓</div>
+    <div class="copy-feedback" id="copyAllFeedback">Copié ✓</div>
+  </div>
+  <button class="btn btn-outline" id="btnNewTest">Nouveau test</button>
+</div>
+
+<script>
+// ---------------- UTILITIES ----------------
+function vibrate(pattern){
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
+function fmtTime(totalSec){
+  const m = Math.floor(totalSec/60), s = totalSec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+let wakeLock = null;
+async function requestWake(){
+  try{ if('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
+}
+function releaseWake(){
+  try{ if(wakeLock) wakeLock.release(); wakeLock=null; }catch(e){}
+}
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ---------------- WHEEL PICKER ----------------
+const ITEM_H = 44;
+function buildWheel(containerId, min, max, step, initial){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  el.appendChild(document.createElement('div')).className='wheel-pad';
+  const values = [];
+  for(let v=min; v<=max; v+=step) values.push(v);
+  values.forEach(v=>{
+    const d = document.createElement('div');
+    d.className='wheel-item';
+    d.textContent = v;
+    d.dataset.val = v;
+    el.appendChild(d);
+  });
+  el.appendChild(document.createElement('div')).className='wheel-pad';
+
+  function setValue(v, smooth){
+    let idx = values.indexOf(v);
+    if(idx<0) idx = Math.round((v-min)/step);
+    idx = Math.max(0, Math.min(values.length-1, idx));
+    el.scrollTo({top: idx*ITEM_H, behavior: smooth? 'smooth':'auto'});
+  }
+  function getValue(){
+    const idx = Math.round(el.scrollTop/ITEM_H);
+    const clamped = Math.max(0, Math.min(values.length-1, idx));
+    return values[clamped];
+  }
+  function highlightCenter(){
+    const idx = Math.round(el.scrollTop/ITEM_H);
+    Array.from(el.children).forEach((c,i)=>{
+      if(c.classList.contains('wheel-item')) c.classList.toggle('center-val', i-1===idx);
+    });
+  }
+  el.addEventListener('scroll', ()=>{ highlightCenter(); });
+  setValue(initial!==undefined && initial!==null ? initial : values[Math.floor(values.length/2)], false);
+  setTimeout(highlightCenter, 50);
+  return {getValue, setValue};
+}
+
+// pretest wheels
+const wPreFc = buildWheel('w-pre-fc', 30, 220, 1, 80);
+const wPreSpo2 = buildWheel('w-pre-spo2', 50, 100, 1, 97);
+const wPreTas = buildWheel('w-pre-tas', 60, 260, 1, 130);
+const wPreTad = buildWheel('w-pre-tad', 30, 150, 1, 80);
+
+// minute wheels are built dynamically per row (see below)
+
+// recovery wheels
+const wArretFc = buildWheel('w-arret-fc', 30, 220, 1, 90);
+const wArretSpo2 = buildWheel('w-arret-spo2', 50, 100, 1, 95);
+const wArretTas = buildWheel('w-arret-tas', 60, 260, 1, 140);
+const wArretTad = buildWheel('w-arret-tad', 30, 150, 1, 80);
+
+const wRecupFc = buildWheel('w-recup-fc', 30, 220, 1, 85);
+const wRecupSpo2 = buildWheel('w-recup-spo2', 50, 100, 1, 96);
+const wRecupTas = buildWheel('w-recup-tas', 60, 260, 1, 130);
+const wRecupTad = buildWheel('w-recup-tad', 30, 150, 1, 80);
+
+const wHrr1Fc = buildWheel('w-hrr1-fc', 30, 220, 1, 95);
+
+// HRR1 toggle
+document.getElementById('hrr1Enabled').addEventListener('change', (e)=>{
+  document.getElementById('hrr1Wrap').style.display = e.target.value==='oui' ? 'block' : 'none';
+});
+
+const wDistFinal = buildWheel('w-distfinal', 0, 700, 5, 0);
+
+// default date
+(function(){
+  const d = new Date();
+  document.getElementById('dateTest').value = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+})();
+
+// ---------------- STATE ----------------
+const state = {
+  pretest: {fc:null, spo2:null, tas:null, tad:null},
+  distance: 0,
+  distanceLog: [], // [{distance, ts, segDurationSec, speedMs, speedKmh}]
+  minutes: {}, // {1:{fc,spo2}, ...}
+  pauses: [],
+  isPaused: false,
+  pauseStart: null,
+  testStartTs: null,
+  elapsedSec: 0,
+  endedAtSec: null,
+  stoppedEarly: false,
+  recoveryStartTs: null,
+  recoveryElapsedSec: 0,
+  recoveryDone: false
+};
+
+let timerInterval = null;
+let recoveryInterval = null;
+const triggeredMinutes = new Set();
+const validatedMinutes = new Set();
+
+// build the 6 minute rows up-front (summary only; capture happens in the fixed overlay)
+const minuteRowsEl = document.getElementById('minuteRows');
+for(let m=1; m<=6; m++){
+  const row = document.createElement('div');
+  row.className = 'minute-row';
+  row.id = 'minrow-'+m;
+  row.innerHTML = `
+    <div class="minute-head" data-m="${m}">
+      <div class="mtitle">Minute ${m}</div>
+      <div class="msummary" id="minsum-${m}">—</div>
+    </div>
+  `;
+  minuteRowsEl.appendChild(row);
+  // tapping a reached-but-not-yet-validated row re-opens its capture overlay
+  row.querySelector('.minute-head').addEventListener('click', ()=>{
+    if(!row.classList.contains('reached')) return;
+    if(validatedMinutes.has(m)){
+      // allow re-editing an already validated minute
+      openCapture(m, true);
+    } else if(!captureState.active){
+      openCapture(m, false);
+    }
+  });
+}
+
+function prevMinuteValues(m){
+  if(m===1) return {fc: state.pretest.fc, spo2: state.pretest.spo2};
+  const prev = state.minutes[m-1];
+  return prev ? {fc:prev.fc, spo2:prev.spo2} : {fc: state.pretest.fc, spo2: state.pretest.spo2};
+}
+
+// single reusable capture wheel pair (built once, re-targeted each minute)
+let wCaptureFc = null, wCaptureSpo2 = null;
+const captureState = {active:false, m:null, queue:[]};
+
+function openCapture(m, isReedit){
+  captureState.active = true;
+  captureState.m = m;
+  const prevVals = m>1 && state.minutes[m-1] ? state.minutes[m-1]
+                  : (isReedit && state.minutes[m] ? state.minutes[m] : prevMinuteValues(m));
+  const startFc = (isReedit && state.minutes[m]) ? state.minutes[m].fc : (prevVals.fc || 80);
+  const startSpo2 = (isReedit && state.minutes[m]) ? state.minutes[m].spo2 : (prevVals.spo2 || 96);
+
+  document.getElementById('captureTitle').textContent = 'Minute '+m;
+  document.getElementById('capturePrevHint').textContent = isReedit
+    ? 'valeur actuelle pré-remplie'
+    : (m>1 ? 'valeurs de la minute précédente pré-remplies' : 'valeurs pré-test pré-remplies');
+
+  wCaptureFc = buildWheel('w-capture-fc', 30, 220, 1, startFc);
+  wCaptureSpo2 = buildWheel('w-capture-spo2', 50, 100, 1, startSpo2);
+
+  document.getElementById('captureOverlay').classList.add('show');
+  // re-apply wheel positions once the overlay has slid into place (display/layout settled)
+  setTimeout(()=>{ wCaptureFc.setValue(startFc,false); wCaptureSpo2.setValue(startSpo2,false); }, 60);
+}
+
+function closeCapture(){
+  document.getElementById('captureOverlay').classList.remove('show');
+  captureState.active = false;
+  captureState.m = null;
+  // if another minute was reached while capturing, open it now
+  if(captureState.queue.length){
+    const next = captureState.queue.shift();
+    setTimeout(()=> openCapture(next, false), 320);
+  }
+}
+
+function activateMinute(m){
+  if(triggeredMinutes.has(m)) return;
+  triggeredMinutes.add(m);
+  const row = document.getElementById('minrow-'+m);
+  row.classList.add('reached','due');
+  document.getElementById('minsum-'+m).textContent = 'à saisir…';
+  vibrate([90,40,90]);
+  setTimeout(()=> row.classList.remove('due'), 2200);
+  // open the capture overlay, or queue it if one is already open
+  if(captureState.active){
+    if(!captureState.queue.includes(m)) captureState.queue.push(m);
+  } else {
+    openCapture(m, false);
+  }
+}
+
+document.getElementById('btnValidateCapture').addEventListener('click', ()=>{
+  const m = captureState.m;
+  if(m===null) return;
+  const fc = wCaptureFc.getValue();
+  const spo2 = wCaptureSpo2.getValue();
+  state.minutes[m] = {fc, spo2};
+  validatedMinutes.add(m);
+  const row = document.getElementById('minrow-'+m);
+  document.getElementById('minsum-'+m).innerHTML = `FC ${fc} · SpO₂ ${spo2}% <span class="check-badge">✓</span>`;
+  row.classList.add('validated');
+  vibrate(40);
+  closeCapture();
+});
+
+// ---------------- SCREEN 1 -> START TEST ----------------
+document.getElementById('btnStartTest').addEventListener('click', ()=>{
+  state.pretest.fc = wPreFc.getValue();
+  state.pretest.spo2 = wPreSpo2.getValue();
+  state.pretest.tas = wPreTas.getValue();
+  state.pretest.tad = wPreTad.getValue();
+
+  state.testStartTs = Date.now();
+  requestWake();
+  showScreen('screen-running');
+  vibrate(120);
+
+  timerInterval = setInterval(()=>{
+    // The 6MWT clock never stops — even during a pause the elapsed time keeps running.
+    // Pause is only a visual marker (and recorded for the report/chart), not a chrono stop.
+    state.elapsedSec = Math.floor((Date.now() - state.testStartTs)/1000);
+    document.getElementById('timerDisplay').textContent = fmtTime(state.elapsedSec);
+
+    // minute boundary triggers (1..6)
+    const minuteHit = Math.floor(state.elapsedSec/60);
+    if(minuteHit>=1 && minuteHit<=6 && !triggeredMinutes.has(minuteHit)){
+      activateMinute(minuteHit);
+    }
+    // auto end at 6:00
+    if(state.elapsedSec>=360 && state.endedAtSec===null){
+      endTest(false);
+    }
+  }, 250);
+});
+
+function pausedTotalSec(){
+  let total = 0;
+  state.pauses.forEach(p=>{ total += (p.end? (p.end-p.start) : (Date.now()-p.start))/1000; });
+  return Math.floor(total);
+}
+
+// ---------------- PAUSE ----------------
+document.getElementById('btnPause').addEventListener('click', ()=>{
+  const topStatus = document.getElementById('topStatus');
+  const flag = document.getElementById('pauseFlag');
+  const btn = document.getElementById('btnPause');
+  if(!state.isPaused){
+    state.isPaused = true;
+    state.pauses.push({start: Date.now(), end:null});
+    topStatus.classList.add('paused');
+    flag.style.display='block';
+    btn.textContent='Reprendre';
+    vibrate([60,60,60]);
+  } else {
+    state.isPaused = false;
+    const last = state.pauses[state.pauses.length-1];
+    if(last) last.end = Date.now();
+    topStatus.classList.remove('paused');
+    flag.style.display='none';
+    btn.textContent='Pause';
+    vibrate(60);
+  }
+});
+// note: pause only visually flags the state; the timer interval keeps running and
+// elapsedSec keeps incrementing in real time regardless (per clinical requirement).
+// We intentionally do NOT subtract pause time from elapsedSec display below — see fix:
+</script>
+<script>
+// Correction: the spec says "le temps ne s'arrête pas" — the displayed timer must keep
+// running in real time during pause, it should NOT freeze and should NOT have paused
+// time subtracted. We only logged pauses for the record (to show in the final report).
+// Override pausedTotalSec to always return 0 so elapsedSec = pure real time elapsed.
+function pausedTotalSec(){ return 0; }
+</script>
+<script>
+// ---------------- DISTANCE ----------------
+function pauseOverlapMs(fromTs, toTs){
+  // sum of paused durations that overlap the [fromTs, toTs] interval
+  let total = 0;
+  state.pauses.forEach(p=>{
+    const pStart = p.start;
+    const pEnd = p.end || Date.now();
+    const overlapStart = Math.max(pStart, fromTs);
+    const overlapEnd = Math.min(pEnd, toTs);
+    if(overlapEnd > overlapStart) total += (overlapEnd - overlapStart);
+  });
+  return total;
+}
+
+function formatSpeed(ms){
+  if(ms===null || !isFinite(ms)) return '—';
+  return ms.toFixed(2)+' m/s';
+}
+
+// tolerance band for "stable" speed: relative ±8% (permissive, avoids reacting to noise)
+const SPEED_TREND_TOL = 0.08;
+function speedTrend(current, previous){
+  if(current===null || previous===null || !isFinite(current) || !isFinite(previous) || previous===0) return null;
+  const rel = (current - previous)/previous;
+  if(rel > SPEED_TREND_TOL) return 'up';
+  if(rel < -SPEED_TREND_TOL) return 'down';
+  return 'flat';
+}
+function renderTrend(trend){
+  const el = document.getElementById('speedTrend');
+  if(!trend){ el.textContent=''; el.className='speed-trend'; return; }
+  if(trend==='up'){ el.textContent='▲ vitesse en hausse'; el.className='speed-trend up'; }
+  else if(trend==='down'){ el.textContent='▼ vitesse en baisse'; el.className='speed-trend down'; }
+  else { el.textContent='▬ vitesse stable'; el.className='speed-trend flat'; }
+}
+
+document.getElementById('btnPlus25').addEventListener('click', ()=>{
+  const now = Date.now();
+  const lastTs = state.distanceLog.length ? state.distanceLog[state.distanceLog.length-1].ts : state.testStartTs;
+  const pauseMs = pauseOverlapMs(lastTs, now);
+  const segDurationSec = Math.max(0, (now - lastTs - pauseMs)/1000);
+  const speedMs = segDurationSec>0 ? (25/segDurationSec) : null;
+
+  const prevSpeed = state.distanceLog.length ? state.distanceLog[state.distanceLog.length-1].speedMs : null;
+  const trend = speedTrend(speedMs, prevSpeed);
+
+  state.distance += 25;
+  state.distanceLog.push({distance: state.distance, ts: now, segDurationSec, speedMs, trend});
+
+  const num = document.getElementById('distanceNum');
+  num.textContent = state.distance;
+  num.classList.add('pulse');
+  setTimeout(()=>num.classList.remove('pulse'), 140);
+  vibrate(30);
+
+  document.getElementById('speedLive').textContent = speedMs!==null
+    ? `Vitesse sur ces 25 m : ${formatSpeed(speedMs)}`
+    : '—';
+  renderTrend(trend);
+});
+
+document.getElementById('btnMinus25').addEventListener('click', ()=>{
+  if(state.distance<=0) return;
+  state.distance = Math.max(0, state.distance - 25);
+  state.distanceLog.pop(); // remove the corresponding logged segment
+  document.getElementById('distanceNum').textContent = state.distance;
+  const prev = state.distanceLog[state.distanceLog.length-1];
+  document.getElementById('speedLive').textContent = prev && prev.speedMs!==null
+    ? `Vitesse sur ces 25 m : ${formatSpeed(prev.speedMs)}`
+    : '—';
+  renderTrend(prev ? prev.trend : null);
+  vibrate(30);
+});
+
+// ---------------- STOP TEST (manual or auto) ----------------
+function endTest(manual){
+  if(state.endedAtSec !== null) return; // already ended
+  state.endedAtSec = state.elapsedSec;
+  state.stoppedEarly = state.endedAtSec < 355; // small tolerance
+  vibrate([150,80,150,80,150]);
+  clearInterval(timerInterval);
+  // close any open capture overlay
+  document.getElementById('captureOverlay').classList.remove('show');
+  captureState.active = false;
+
+  // The "mesures à l'arrêt" ARE the measures at the end of the walk (minute 6 if complete,
+  // or the last minute reached if stopped early). Prefill them from the last recorded minute.
+  let lastMin = null;
+  for(let m=6;m>=1;m--){ if(state.minutes[m]){ lastMin = state.minutes[m]; break; } }
+  const arretFcInit = lastMin ? lastMin.fc : (state.pretest.fc || 90);
+  const arretSpo2Init = lastMin ? lastMin.spo2 : (state.pretest.spo2 || 95);
+
+  const badge = document.getElementById('stopBadge');
+  const motifCard = document.getElementById('motifCard');
+  if(state.stoppedEarly){
+    badge.innerHTML = `<div class="badge-warn">⚠ Test arrêté à ${fmtTime(state.endedAtSec)} (avant 6:00). Les mesures « à l'arrêt » correspondent à ce moment.</div>`;
+    motifCard.style.display='block';
+  } else {
+    badge.innerHTML = `<div class="badge-ok">Test mené à terme (6:00). Les mesures « à l'arrêt » sont celles de la 6ᵉ minute.</div>`;
+    motifCard.style.display='none';
+  }
+  showScreen('screen-recovery');
+
+  // Re-apply wheel values once the screen is laid out (scrollTo is a no-op on hidden elements).
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      wDistFinal.setValue(state.distance, false);
+      wArretFc.setValue(arretFcInit, false);
+      wArretSpo2.setValue(arretSpo2Init, false);
+      wArretTas.setValue(state.pretest.tas || 140, false);
+      wArretTad.setValue(state.pretest.tad || 80, false);
+      wRecupFc.setValue(state.pretest.fc || 85, false);
+      wRecupSpo2.setValue(state.pretest.spo2 || 96, false);
+      wRecupTas.setValue(state.pretest.tas || 130, false);
+      wRecupTad.setValue(state.pretest.tad || 80, false);
+      wHrr1Fc.setValue(arretFcInit, false);
+    }, 40);
+  });
+}
+
+document.getElementById('btnStopTest').addEventListener('click', ()=> endTest(true));
+
+// ---------------- RECOVERY ----------------
+document.getElementById('btnPatientAssis').addEventListener('click', (e)=>{
+  state.recoveryStartTs = Date.now();
+  document.getElementById('recoveryTimerWrap').style.display='block';
+  e.target.disabled = true;
+  e.target.style.opacity = 0.5;
+  vibrate(80);
+
+  recoveryInterval = setInterval(()=>{
+    state.recoveryElapsedSec = Math.floor((Date.now()-state.recoveryStartTs)/1000);
+    document.getElementById('recoveryTimerDisplay').textContent = fmtTime(state.recoveryElapsedSec);
+    if(state.recoveryElapsedSec>=180 && !state.recoveryDone){
+      state.recoveryDone = true;
+      vibrate([150,80,150]);
+    }
+  }, 250);
+});
+
+// ---------------- FINISH -> RESULTS ----------------
+function captureFinalSnapshot(){
+  const hrr1Enabled = document.getElementById('hrr1Enabled').value === 'oui';
+  const snap = {
+    distFinal: wDistFinal.getValue(),
+    arret: {fc:wArretFc.getValue(), spo2:wArretSpo2.getValue(), tas:wArretTas.getValue(), tad:wArretTad.getValue()},
+    recup: {fc:wRecupFc.getValue(), spo2:wRecupSpo2.getValue(), tas:wRecupTas.getValue(), tad:wRecupTad.getValue()},
+    hrr1: hrr1Enabled ? {fc: wHrr1Fc.getValue()} : null
+  };
+  // The "mesures à l'arrêt" ARE the minute-6 measures when the test ran to term.
+  // If minute 6 wasn't captured during the walk (typical: it's the very moment we stop),
+  // backfill it from the arrêt values so the per-minute table is complete and consistent.
+  if(!state.stoppedEarly && !state.minutes[6]){
+    state.minutes[6] = {fc: snap.arret.fc, spo2: snap.arret.spo2, fromArret:true};
+  }
+  return snap;
+}
+
+// Enright & Sherrill (1998) predicted 6MWD, m
+function predicted6MWD(sexeH, ageY, poidsKg, tailleCm){
+  if(ageY===null || poidsKg===null || tailleCm===null) return null;
+  const sexTerm = sexeH ? 51.31 : 0;
+  return 218 + (tailleCm*5.14) - (ageY*5.32) - (poidsKg*1.8) + sexTerm;
+}
+
+function buildReport(snap){
+  const nom = document.getElementById('nom').value || 'Patient';
+  const date = document.getElementById('dateTest').value || '';
+  const sexeH = document.getElementById('sexe').value==='h';
+  const sexe = sexeH ? 'masculin' : 'féminin';
+  const ageRaw = document.getElementById('age').value;
+  const poidsRaw = document.getElementById('poids').value;
+  const tailleRaw = document.getElementById('taille').value;
+  const age = ageRaw ? parseFloat(ageRaw) : null;
+  const poids = poidsRaw ? parseFloat(poidsRaw) : null;
+  const taille = tailleRaw ? parseFloat(tailleRaw) : null;
+
+  const motif = document.getElementById('motifArret').value.trim();
+  const distFinal = snap.distFinal;
+  const arret = snap.arret;
+  const recup = snap.recup;
+
+  const aideTechOui = document.getElementById('aideTech').value==='oui';
+  const aideTechPrec = document.getElementById('aideTechPrec').value.trim();
+  const o2Oui = document.getElementById('o2').value==='oui';
+  const o2Prec = document.getElementById('o2Prec').value.trim();
+  const incidents = document.getElementById('incidents').value.trim();
+
+  // norm + interpretation
+  const norm = predicted6MWD(sexeH, age, poids, taille);
+  const pctTheo = (norm && distFinal) ? Math.round(distFinal*100/norm) : null;
+  const diffPct = pctTheo!==null ? pctTheo-100 : null;
+
+  // desaturation (effort nadir excludes recovery)
+  const spo2Series = [state.pretest.spo2];
+  for(let m=1;m<=6;m++){ if(state.minutes[m]) spo2Series.push(state.minutes[m].spo2); }
+  spo2Series.push(arret.spo2);
+  const spo2Effort = spo2Series.filter(v=>v!==null && v!==undefined);
+  const spo2Repos = state.pretest.spo2;
+  const spo2Min = spo2Effort.length ? Math.min(...spo2Effort) : null;
+  const desat = (spo2Repos!==null && spo2Min!==null) ? spo2Repos - spo2Min : null;
+  const desatSig = desat!==null && (desat>=4 || (spo2Min!==null && spo2Min<90));
+
+  // speed + trend
+  const avgSpeedMs = (state.endedAtSec>0) ? (distFinal/state.endedAtSec) : null;
+  const segSpeeds = state.distanceLog.map(e=>e.speedMs).filter(v=>v!==null && isFinite(v));
+  const segAvg = segSpeeds.length ? segSpeeds.reduce((a,b)=>a+b,0)/segSpeeds.length : null;
+  const segMin = segSpeeds.length ? Math.min(...segSpeeds) : null;
+  const segMax = segSpeeds.length ? Math.max(...segSpeeds) : null;
+  // global trend: compare mean of first third vs last third of segments
+  let globalTrend = null;
+  if(segSpeeds.length>=4){
+    const k = Math.max(1, Math.floor(segSpeeds.length/3));
+    const first = segSpeeds.slice(0,k);
+    const last = segSpeeds.slice(-k);
+    const mFirst = first.reduce((a,b)=>a+b,0)/first.length;
+    const mLast = last.reduce((a,b)=>a+b,0)/last.length;
+    globalTrend = speedTrend(mLast, mFirst);
+  }
+  const trendLabel = globalTrend==='up' ? 'tendance à l\'accélération au fil du test'
+                   : globalTrend==='down' ? 'tendance au ralentissement au fil du test'
+                   : globalTrend==='flat' ? 'vitesse globalement stable sur le test' : null;
+
+  // ---- cardio-respiratory indices (raw, contextualised — no diagnosis) ----
+  const fcRepos = state.pretest.fc;
+  const fcPic = arret.fc; // FC at end of walk = peak effort HR available
+  const fcMaxTheo = age!==null ? Math.round(208 - 0.7*age) : null; // Tanaka 2001
+  // chronotropic reserve used = (peak - rest) / (theoretical max - rest)
+  let reserveUsedPct = null;
+  if(fcMaxTheo!==null && fcRepos!==null && fcPic!==null && (fcMaxTheo - fcRepos) > 0){
+    reserveUsedPct = Math.round(((fcPic - fcRepos)/(fcMaxTheo - fcRepos))*100);
+  }
+  const pctFcMax = (fcMaxTheo!==null && fcPic!==null) ? Math.round((fcPic/fcMaxTheo)*100) : null;
+  // HRR1 (optional, only point with published thresholds) and HRR at +3 min
+  const hrr1 = (snap.hrr1 && fcPic!==null) ? (fcPic - snap.hrr1.fc) : null;
+  const hrr3 = (recup.fc!==null && fcPic!==null) ? (fcPic - recup.fc) : null;
+  // BP response
+  const pasRepos = state.pretest.tas, padRepos = state.pretest.tad;
+  const pasArret = arret.tas, padArret = arret.tad;
+  const deltaPas = (pasRepos!==null && pasArret!==null) ? pasArret - pasRepos : null;
+  const deltaPad = (padRepos!==null && padArret!==null) ? padArret - padRepos : null;
+
+  const L = [];
+  L.push('TEST DE MARCHE DE 6 MINUTES');
+  L.push(`${nom}  —  ${date}`);
+  L.push(`Sexe ${sexe} · Âge ${age!==null?age+' ans':'NR'} · Poids ${poids!==null?poids+' kg':'NR'} · Taille ${taille!==null?taille+' cm':'NR'}`);
+  L.push('');
+  L.push('━━━ RÉSULTAT ━━━');
+  if(state.stoppedEarly){
+    L.push(`/!\\ ARRÊT ANTICIPÉ à ${fmtTime(state.endedAtSec)}${motif? ' — motif : '+motif : ''}`);
+  } else {
+    L.push('Test mené à terme (6:00).');
+  }
+  if(norm!==null && distFinal!==null){
+    const sens = distFinal < norm ? 'EN DESSOUS' : 'AU-DESSUS';
+    L.push(`Distance : ${distFinal} m  —  ${pctTheo} % de la valeur théorique (${Math.round(norm)} m, Enright & Sherrill 1998).`);
+    L.push(`=> ${sens} de la norme attendue, écart de ${diffPct>=0?'+':''}${diffPct} %.${state.stoppedEarly? ' À interpréter avec prudence (arrêt anticipé).':''}`);
+  } else {
+    L.push(`Distance parcourue : ${distFinal} m`);
+    L.push('Norme théorique non calculable (données anthropométriques incomplètes).');
+  }
+  if(desat!==null){
+    L.push(`SpO₂ : repos ${spo2Repos}% → nadir effort ${spo2Min}% (${desat>0?'-':'+'}${Math.abs(desat)} pt).`);
+  }
+  if(avgSpeedMs!==null) L.push(`Vitesse moyenne : ${formatSpeed(avgSpeedMs)}${trendLabel? ' — '+trendLabel:''}.`);
+  if(segAvg!==null) L.push(`Vitesse par tranche de 25 m : moy. ${formatSpeed(segAvg)} (min ${formatSpeed(segMin)} – max ${formatSpeed(segMax)}).`);
+  if(state.pauses.length){
+    const totalPause = state.pauses.reduce((s,p)=> s + ((p.end||Date.now())-p.start), 0)/1000;
+    L.push(`Pauses : ${state.pauses.length} (≈ ${Math.round(totalPause)}s cumulées) — temps de test non arrêté ; exclues du calcul de vitesse par tranche.`);
+  }
+  L.push('');
+  L.push('━━━ MESURES PRÉ-TEST ━━━');
+  L.push(`FC ${state.pretest.fc} bpm · SpO₂ ${state.pretest.spo2}% · TA ${state.pretest.tas}/${state.pretest.tad} mmHg`);
+  L.push('');
+  L.push('━━━ SURVEILLANCE PAR MINUTE ━━━');
+  for(let m=1; m<=6; m++){
+    if(state.minutes[m]){
+      const tag = state.minutes[m].fromArret ? ' (à l\'arrêt)' : '';
+      L.push(`Minute ${m} : FC ${state.minutes[m].fc} bpm · SpO₂ ${state.minutes[m].spo2}%${tag}`);
+    } else {
+      L.push(`Minute ${m} : non renseignée`);
+    }
+  }
+  L.push('');
+  L.push(`━━━ MESURES À L'ARRÊT (fin de marche) ━━━`);
+  L.push(`FC ${arret.fc} bpm · SpO₂ ${arret.spo2}% · TA ${arret.tas}/${arret.tad} mmHg`);
+  L.push('');
+  L.push('━━━ MESURES À +3 MIN DE REPOS ━━━');
+  L.push(`FC ${recup.fc} bpm · SpO₂ ${recup.spo2}% · TA ${recup.tas}/${recup.tad} mmHg`);
+  if(snap.hrr1){
+    L.push(`FC à +1 min : ${snap.hrr1.fc} bpm`);
+  }
+  L.push('');
+  L.push('━━━ ÉLÉMENTS CARDIO-RESPIRATOIRES (DESCRIPTIF) ━━━');
+  // --- measured data, stated factually, no diagnostic qualifier ---
+  if(fcMaxTheo!==null){
+    L.push(`FC max théorique (Tanaka) : ${fcMaxTheo} bpm.`);
+  }
+  if(fcRepos!==null && fcPic!==null){
+    L.push(`FC : repos ${fcRepos} → pic fin de marche ${fcPic} bpm (+${fcPic-fcRepos}).`);
+  }
+  if(reserveUsedPct!==null){
+    L.push(`Réserve chronotrope utilisée : ${reserveUsedPct} %${pctFcMax!==null? ' ('+pctFcMax+' % de la FC max théo)':''}.`);
+  }
+  if(hrr1!==null) L.push(`Récupération FC à 1 min (HRR1) : ${hrr1} bpm.`);
+  if(hrr3!==null) L.push(`Récupération FC à 3 min (HRR3) : ${hrr3} bpm.`);
+  if(deltaPas!==null && deltaPad!==null){
+    L.push(`TA : repos ${pasRepos}/${padRepos} → arrêt ${pasArret}/${padArret} mmHg (ΔPAS ${deltaPas>=0?'+':''}${deltaPas}, ΔPAD ${deltaPad>=0?'+':''}${deltaPad}).`);
+  }
+  if(desat!==null){
+    L.push(`SpO₂ : repos ${spo2Repos}% → nadir effort ${spo2Min}% (${desat>0?'-':'+'}${Math.abs(desat)} pt) → +3 min ${recup.spo2}%.`);
+  }
+  // --- reference values, listed separately as indicative, with validity caveats ---
+  L.push('');
+  L.push('Valeurs de référence (indicatives, à confronter au contexte par le médecin) :');
+  L.push('• Réserve chronotrope : incompétence chronotrope définie <80 % — sur épreuve d\'effort MAXIMALE ; le TDM6 étant sous-maximal, le seuil n\'est pas transposable ici.');
+  L.push('• HRR1 : seuils publiés selon population — ≤12 (post-COVID), <13 (fibrose pulmonaire idiopathique), <18 (HTAP). NON validés en gériatrie/SMR : à interpréter avec prudence hors de ces populations.');
+  L.push('• HRR3 : pas de seuil publié (seuls les seuils à 1 min sont établis).');
+  L.push('• Désaturation d\'effort : repère consensuel ATS/ERS = chute ≥4 pt et/ou SpO₂ <90 %.');
+  L.push('');
+  L.push('━━━ CONDITIONS ━━━');
+  L.push(`Aide technique : ${aideTechOui ? (aideTechPrec || 'oui, non précisée') : 'aucune'}`);
+  L.push(`Oxygénothérapie d'appoint : ${o2Oui ? (o2Prec || 'oui, non précisée') : 'aucune'}`);
+  if(incidents) L.push(`Incidents / remarques : ${incidents}`);
+  L.push('');
+  L.push('Réf. : Enright & Sherrill, Am J Respir Crit Care Med 1998;158(5):1384-87 (norme distance). — Tanaka, Monahan & Seals, J Am Coll Cardiol 2001;37(1):153-56, PMID 11153730 (FC max). — HRR1 : Rezende et al., PLoS One 2022 (HTAP) ; Swigris et al., PMID 19395579 (FPI).');
+  L.push('Données descriptives d\'un test sous-maximal. Outil v1 — développé par Sébastien Thorent.');
+
+  return L.join('\n');
+}
+
+// ---------------- RESULT CHART ----------------
+function drawResultChart(snap){
+  const svg = document.getElementById('resultChart');
+  const arretFc = snap.arret.fc, arretSpo2 = snap.arret.spo2;
+  const recupFc = snap.recup.fc, recupSpo2 = snap.recup.spo2;
+  const endedAt = state.endedAtSec || 0;
+
+  const points = [];
+  if(state.pretest.spo2!==null) points.push({t:0, spo2:state.pretest.spo2, fc:state.pretest.fc});
+  for(let m=1;m<=6;m++){ if(state.minutes[m]) points.push({t:m*60, spo2:state.minutes[m].spo2, fc:state.minutes[m].fc}); }
+  points.push({t:endedAt, spo2:arretSpo2, fc:arretFc, isArret:true});
+  points.push({t:endedAt+180, spo2:recupSpo2, fc:recupFc, isRecup:true});
+
+  const totalT = Math.max(endedAt+180, 60);
+  const W=380, H=300, padL=36, padR=40, padT=40, padB=30;
+  const plotW = W-padL-padR, plotH = H-padT-padB;
+  const xFor = t => padL + (t/totalT)*plotW;
+
+  const spVals = points.map(p=>p.spo2).filter(v=>v!==null && v!==undefined);
+  const fcVals = points.map(p=>p.fc).filter(v=>v!==null && v!==undefined);
+  let spMin=80, spMax=100;
+  if(spVals.length){
+    spMin = Math.floor((Math.min(...spVals)-10)/5)*5;
+    if(spMin<0) spMin=0; if(spMin>90) spMin=90;
+  }
+  const spStep = (spMax-spMin)<=20 ? 5 : 10;
+  // FC keeps an internal scale for positioning the line, but gets no visible tick axis
+  // (its values are annotated directly at each point instead, to keep a single right axis free for speed).
+  const fcMin = fcVals.length? Math.max(0, Math.floor(Math.min(...fcVals)/10)*10-10) : 40;
+  const fcMax = fcVals.length? Math.ceil(Math.max(...fcVals)/10)*10+10 : 180;
+  const yForSp = v => padT + plotH - ((v-spMin)/(spMax-spMin))*plotH;
+  const yForFc = v => padT + plotH - ((v-fcMin)/(fcMax-fcMin))*plotH;
+
+  // Speed gets the single right-hand axis
+  const speeds = state.distanceLog.map(e=>e.speedMs).filter(v=>v!==null && isFinite(v));
+  let spdMax = speeds.length? Math.ceil(Math.max(...speeds)*4)/4 : 1.5;
+  if(spdMax<1) spdMax=1;
+  const spdStep = spdMax<=1.5 ? 0.25 : (spdMax<=3 ? 0.5 : 1);
+  const yForSpd = v => padT + plotH - (v/spdMax)*plotH;
+
+  let s = `<rect x="0" y="0" width="${W}" height="${H}" fill="#fffdf9"/>`;
+
+  // --- phase separation (walk vs recovery), for readability by non-specialists ---
+  const xStop = xFor(endedAt);
+  const xEndAxis = xFor(endedAt+180);
+  // faint tint over the recovery span (6' -> +3')
+  s += `<rect x="${xStop}" y="${padT}" width="${xEndAxis-xStop}" height="${plotH}" fill="#5b6a60" opacity="0.06"/>`;
+  // vertical "end of walk" marker at 6'
+  s += `<line x1="${xStop}" y1="${padT}" x2="${xStop}" y2="${padT+plotH}" stroke="#5b6a60" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.7"/>`;
+  s += `<text x="${xStop}" y="${padT+plotH+26}" font-size="7.5" fill="#5b6a60" text-anchor="middle" font-family="sans-serif" font-style="italic">arrêt de la marche</text>`;
+  // phase banners at the very top
+  const bY = 22, bH = 13;
+  s += `<rect x="${padL}" y="${bY-bH+3}" width="${xStop-padL}" height="${bH}" rx="2" fill="#2f6b4f" opacity="0.14"/>`;
+  s += `<text x="${(padL+xStop)/2}" y="${bY+3}" font-size="7.5" fill="#2f6b4f" text-anchor="middle" font-family="sans-serif" font-weight="bold">PHASE DE TEST</text>`;
+  s += `<rect x="${xStop}" y="${bY-bH+3}" width="${xEndAxis-xStop}" height="${bH}" rx="2" fill="#5b6a60" opacity="0.16"/>`;
+  s += `<text x="${(xStop+xEndAxis)/2}" y="${bY+3}" font-size="7.5" fill="#4a5a50" text-anchor="middle" font-family="sans-serif" font-weight="bold">REPOS</text>`;
+
+  // pause bands: shaded vertical zones so an arrest is visible at a glance
+  if(state.pauses.length){
+    state.pauses.forEach(pz=>{
+      const pStartSec = (pz.start - state.testStartTs)/1000;
+      const pEndSec = ((pz.end||pz.start) - state.testStartTs)/1000;
+      const x1 = xFor(Math.max(0, Math.min(endedAt, pStartSec)));
+      const x2 = xFor(Math.max(0, Math.min(endedAt, pEndSec)));
+      const w = Math.max(2, x2-x1);
+      s += `<rect x="${x1}" y="${padT}" width="${w}" height="${plotH}" fill="#b5601f" opacity="0.13"/>`;
+      s += `<text x="${x1+w/2}" y="${padT+9}" font-size="7" fill="#b5601f" text-anchor="middle" font-family="sans-serif">pause</text>`;
+    });
+  }
+
+  // left axis (SpO2) gridlines
+  for(let g=spMin; g<=spMax; g+=spStep){
+    const y=yForSp(g);
+    s += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="#e6e0d4" stroke-width="1"/>`;
+    s += `<text x="${padL-5}" y="${y+3}" font-size="8.5" fill="#2f4d3a" text-anchor="end" font-family="monospace">${g}</text>`;
+  }
+  // right axis (speed) ticks only, no gridlines (avoid double grid clutter)
+  for(let g=0; g<=spdMax+0.001; g+=spdStep){
+    const y = yForSpd(g);
+    s += `<text x="${W-padR+5}" y="${y+3}" font-size="8" fill="#c98a3c" text-anchor="start" font-family="monospace">${Math.round(g*100)/100}</text>`;
+  }
+
+  // x time labels
+  for(let m=0;m*60<=endedAt;m++){
+    const x = xFor(m*60);
+    s += `<text x="${x}" y="${padT+plotH+14}" font-size="8" fill="#5b6a60" text-anchor="middle" font-family="sans-serif">${m}'</text>`;
+  }
+  s += `<text x="${xFor(endedAt+180)}" y="${padT+plotH+14}" font-size="8" fill="#5b6a60" text-anchor="middle" font-family="sans-serif">+3'</text>`;
+
+  // --- speed as a discreet step-area on the right axis, drawn first so lines sit on top ---
+  if(state.distanceLog.length){
+    let areaPath = `M${xFor(0)} ${yForSpd(0)} `;
+    state.distanceLog.forEach((entry,i)=>{
+      if(entry.speedMs===null || !isFinite(entry.speedMs)) return;
+      const tStart = ((i===0? state.testStartTs : state.distanceLog[i-1].ts) - state.testStartTs)/1000;
+      const tEnd = (entry.ts - state.testStartTs)/1000;
+      const x1 = xFor(Math.max(0,tStart)), x2 = xFor(Math.min(endedAt,tEnd));
+      const y = yForSpd(entry.speedMs);
+      areaPath += `L${x1} ${y} L${x2} ${y} `;
+    });
+    const lastX = state.distanceLog.length ? xFor(Math.min(endedAt, (state.distanceLog[state.distanceLog.length-1].ts-state.testStartTs)/1000)) : xFor(0);
+    areaPath += `L${lastX} ${yForSpd(0)} Z`;
+    s += `<path d="${areaPath}" fill="#c98a3c" opacity="0.22" stroke="none"/>`;
+    // crisper top edge of the area for readability
+    let edgePath = '';
+    state.distanceLog.forEach((entry,i)=>{
+      if(entry.speedMs===null || !isFinite(entry.speedMs)) return;
+      const tStart = ((i===0? state.testStartTs : state.distanceLog[i-1].ts) - state.testStartTs)/1000;
+      const tEnd = (entry.ts - state.testStartTs)/1000;
+      const x1 = xFor(Math.max(0,tStart)), x2 = xFor(Math.min(endedAt,tEnd));
+      const y = yForSpd(entry.speedMs);
+      edgePath += (edgePath===''?'M':'L') + x1 + ' ' + y + ' L' + x2 + ' ' + y + ' ';
+    });
+    if(edgePath) s += `<path d="${edgePath}" fill="none" stroke="#c98a3c" stroke-width="1.4" opacity="0.75"/>`;
+  }
+
+  // --- SpO2 / FC lines on top of the speed area ---
+  function buildLine(key, yFn){
+    let main='', gap='';
+    for(let i=0;i<points.length;i++){
+      const p = points[i];
+      if(p[key]===null || p[key]===undefined) continue;
+      const x = xFor(p.t), y = yFn(p[key]);
+      if(p.isRecup){
+        for(let j=i-1;j>=0;j--){
+          if(points[j][key]!==null && points[j][key]!==undefined){
+            gap = `M${xFor(points[j].t)} ${yFn(points[j][key])} L${x} ${y}`;
+            break;
+          }
+        }
+      } else {
+        main += (main===''?'M':'L') + x + ' ' + y + ' ';
+      }
+    }
+    return {main, gap};
+  }
+  const spSeg = buildLine('spo2', yForSp);
+  const fcSeg = buildLine('fc', yForFc);
+  if(spSeg.main) s += `<path d="${spSeg.main}" fill="none" stroke="#2f4d3a" stroke-width="2.2"/>`;
+  if(spSeg.gap) s += `<path d="${spSeg.gap}" fill="none" stroke="#2f4d3a" stroke-width="1.3" stroke-dasharray="3,3" opacity="0.6"/>`;
+  if(fcSeg.main) s += `<path d="${fcSeg.main}" fill="none" stroke="#a8431f" stroke-width="2" stroke-dasharray="5,3"/>`;
+  if(fcSeg.gap) s += `<path d="${fcSeg.gap}" fill="none" stroke="#a8431f" stroke-width="1.3" stroke-dasharray="2,3" opacity="0.6"/>`;
+
+  points.forEach(p=>{
+    if(p.spo2!==null && p.spo2!==undefined){
+      const sx = xFor(p.t), sy = yForSp(p.spo2);
+      s += `<circle cx="${sx}" cy="${sy}" r="3" fill="#2f4d3a"/>`;
+      // SpO2 label: placed below the point to reduce collision with the FC label above
+      s += `<text x="${sx}" y="${sy+12}" font-size="7.5" fill="#2f4d3a" text-anchor="middle" font-family="monospace" font-weight="bold">${p.spo2}</text>`;
+    }
+    if(p.fc!==null && p.fc!==undefined){
+      const fx = xFor(p.t), fy = yForFc(p.fc);
+      s += `<circle cx="${fx}" cy="${fy}" r="3" fill="#a8431f"/>`;
+      // FC label above its point
+      s += `<text x="${fx}" y="${fy-6}" font-size="7.5" fill="#a8431f" text-anchor="middle" font-family="monospace" font-weight="bold">${p.fc}</text>`;
+    }
+  });
+
+  // legend
+  s += `<rect x="${padL}" y="6" width="9" height="3" fill="#2f4d3a"/><text x="${padL+13}" y="11" font-size="8.5" fill="#2f4d3a" font-family="sans-serif">SpO₂ (%)</text>`;
+  s += `<rect x="${padL+62}" y="6" width="9" height="3" fill="#a8431f"/><text x="${padL+75}" y="11" font-size="8.5" fill="#a8431f" font-family="sans-serif">FC (bpm)</text>`;
+  s += `<rect x="${padL+138}" y="5" width="9" height="6" fill="#c98a3c" opacity="0.45"/><text x="${padL+151}" y="11" font-size="8.5" fill="#c98a3c" font-family="sans-serif">Vitesse (m/s)</text>`;
+
+  svg.innerHTML = s;
+}
+
+// ---------------- CHART TO PNG / COPY ----------------
+async function chartToPngBlob(){
+  const svgEl = document.getElementById('resultChart');
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(svgEl);
+  if(!svgStr.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)){
+    svgStr = svgStr.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  }
+  const blob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; img.src=url; });
+  const scale=2;
+  const canvas = document.createElement('canvas');
+  canvas.width=380*scale; canvas.height=300*scale;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle='#fffdf9'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.scale(scale,scale);
+  ctx.drawImage(img,0,0,380,300);
+  URL.revokeObjectURL(url);
+  return new Promise(r=>canvas.toBlob(r,'image/png'));
+}
+function blobToDataURL(blob){
+  return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+
+document.getElementById('btnFinish').addEventListener('click', ()=>{
+  clearInterval(recoveryInterval);
+  releaseWake();
+  const snap = captureFinalSnapshot(); // capture wheel values WHILE screen-recovery is still visible
+  document.getElementById('clinical-text').value = buildReport(snap);
+  showScreen('screen-results');
+  requestAnimationFrame(()=> drawResultChart(snap));
+});
+
+async function copyReport(includeChart, fb){
+  const text = document.getElementById('clinical-text').value;
+  try{
+    let imageDataUrl=null;
+    if(includeChart){
+      try{ const b=await chartToPngBlob(); imageDataUrl = await blobToDataURL(b); }catch(e){ imageDataUrl=null; }
+    }
+    if(imageDataUrl || !includeChart){
+      const escapeHtml = s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const linesHtml = text.split('\n').map(l=> l===''? '&nbsp;' : escapeHtml(l)).join('<br>');
+      let html = `<div style="font-family:'Courier New',Consolas,monospace;font-size:12px;line-height:1.5;">${linesHtml}</div>`;
+      if(imageDataUrl) html += `<br><img src="${imageDataUrl}" style="max-width:380px;">`;
+      await navigator.clipboard.write([new ClipboardItem({
+        'text/html': new Blob([html],{type:'text/html'}),
+        'text/plain': new Blob([text],{type:'text/plain'})
+      })]);
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+    fb.textContent = includeChart? 'Copié ✓ (texte + graphique)' : 'Copié ✓';
+  }catch(e){
+    try{
+      const ta = document.getElementById('clinical-text');
+      ta.select();
+      document.execCommand('copy');
+      fb.textContent = 'Copié ✓';
+    }catch(e2){ fb.textContent = 'Erreur lors de la copie'; }
+  }
+  fb.classList.add('show');
+  setTimeout(()=>fb.classList.remove('show'), 2000);
+}
+
+document.getElementById('btnCopy').addEventListener('click', ()=> copyReport(false, document.getElementById('copyFeedback')));
+document.getElementById('btnCopyAll').addEventListener('click', ()=> copyReport(true, document.getElementById('copyAllFeedback')));
+
+document.getElementById('btnCopyChart').addEventListener('click', async ()=>{
+  const fb = document.getElementById('copyChartFeedback');
+  let blob;
+  try{ blob = await chartToPngBlob(); }
+  catch(e){ fb.textContent="Impossible de générer l'image"; fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2500); return; }
+
+  const file = new File([blob], 'graphique-tdm6.png', {type:'image/png'});
+
+  // 1) try clipboard image write (works on desktop + some Android)
+  if(navigator.clipboard && window.ClipboardItem){
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      fb.textContent='Copié ✓';
+      fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2000);
+      return;
+    }catch(e){ /* fall through to share/download */ }
+  }
+  // 2) try native share sheet with the image file (best on iOS/Android)
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({files:[file], title:'Graphique TDM6'});
+      fb.textContent='Partagé ✓';
+      fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2000);
+      return;
+    }catch(e){
+      if(e && e.name==='AbortError'){ return; } // user cancelled the share sheet
+    }
+  }
+  // 3) fallback: download the PNG
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'graphique-tdm6.png';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    fb.textContent='Image téléchargée ✓';
+  }catch(e){
+    fb.textContent="Partage/copie non supporté sur ce navigateur";
+  }
+  fb.classList.add('show'); setTimeout(()=>fb.classList.remove('show'),2500);
+});
+
+document.getElementById('btnNewTest').addEventListener('click', ()=>{
+  window.location.reload();
+});
+</script>
+</body>
+</html>
