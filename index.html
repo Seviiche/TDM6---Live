@@ -411,9 +411,7 @@
     <div class="speed-trend" id="speedTrend"></div>
   </div>
 
-  <div class="metro-lane" id="metroLane"><canvas id="metroCanvas"></canvas></div>
-
-  <button class="btn btn-giant" id="btnPlus25">+ 25 m</button>
+  <button class="btn btn-giant" id="btnPlus25"><span class="metro-fill" id="metroFill"></span><span class="metro-edge" id="metroEdge"></span><span class="m-label">+ 25 m</span></button>
   <div class="minus-row">
     <button class="btn btn-sm btn-outline" id="btnMinus25">− 25 m (correction)</button>
   </div>
@@ -550,41 +548,24 @@
   @keyframes spRise{from{opacity:0;transform:translateY(11px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
   @keyframes spOut{to{opacity:0;visibility:hidden}}
   /* --- in-test rhythm metronome --- */
-  .metro-lane{margin:2px 0 14px;}
-  #metroCanvas{display:block;width:100%;height:52px;background:#f7f2e9;
-    border:1px solid #e6ddcd;border-radius:12px;}
+  /* --- rhythm sweep inside the +25 m button --- */
+  #btnPlus25{position:relative;overflow:hidden;}
+  #btnPlus25 .m-label{position:relative;z-index:2;}
+  .metro-fill{position:absolute;top:0;bottom:0;left:0;width:0;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.15));}
+  .metro-fill.rtl{left:auto;right:0;
+    background:linear-gradient(270deg, rgba(255,255,255,.05), rgba(255,255,255,.15));}
+  .metro-edge{position:absolute;top:10%;bottom:10%;width:2px;left:0;opacity:0;z-index:1;
+    pointer-events:none;transform:translateX(-1px);
+    background:rgba(255,255,255,.62);box-shadow:0 0 12px rgba(255,255,255,.5);}
+  @keyframes metroHold{0%,100%{opacity:.22}50%{opacity:.5}}
+  .metro-edge.hold{animation:metroHold 1.6s ease-in-out infinite;}
 </style>
 
 <script>
 // ---------------- UTILITIES ----------------
-// ---------------- HAPTICS ----------------
-// Web Vibration API works on Android; iOS Safari does not support it, so we also
-// attempt the iOS <input switch> tap (iOS 17.4+, experimental / may be throttled).
-const _isiOS = (/iP(hone|od|ad)/.test(navigator.userAgent)) ||
-               (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent));
-let _hSwitch = null;
-function _ensureSwitch(){
-  if(_hSwitch) return _hSwitch;
-  try{
-    const l = document.createElement('label');
-    l.setAttribute('aria-hidden','true');
-    l.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;opacity:0;pointer-events:none;';
-    const i = document.createElement('input');
-    i.type = 'checkbox'; i.setAttribute('switch','');
-    l.appendChild(i); document.body.appendChild(l); _hSwitch = i;
-  }catch(e){ _hSwitch = null; }
-  return _hSwitch;
-}
-function _iosTap(){
-  try{ const s = _ensureSwitch(); if(s){ s.checked = !s.checked; } }catch(e){}
-}
 function vibrate(pattern){
-  try{ if(navigator.vibrate && navigator.vibrate(pattern)) return; }catch(e){}
-  if(_isiOS) _iosTap();
-}
-function hapticTick(){
-  try{ if(navigator.vibrate){ navigator.vibrate(8); return; } }catch(e){}
-  if(_isiOS) _iosTap();
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
 }
 function fmtTime(totalSec){
   const m = Math.floor(totalSec/60), s = totalSec%60;
@@ -607,7 +588,6 @@ function showScreen(id){
 const ITEM_H = 44;
 function buildWheel(containerId, min, max, step, initial){
   const el = document.getElementById(containerId);
-  let _lastIdx=0, _suppress=true, _supT;
   el.innerHTML = '';
   el.appendChild(document.createElement('div')).className='wheel-pad';
   const values = [];
@@ -625,9 +605,7 @@ function buildWheel(containerId, min, max, step, initial){
     let idx = values.indexOf(v);
     if(idx<0) idx = Math.round((v-min)/step);
     idx = Math.max(0, Math.min(values.length-1, idx));
-    _suppress = true; clearTimeout(_supT); _supT = setTimeout(()=>{ _suppress=false; }, smooth?420:140);
     el.scrollTo({top: idx*ITEM_H, behavior: smooth? 'smooth':'auto'});
-    _lastIdx = idx;
   }
   function getValue(){
     const idx = Math.round(el.scrollTop/ITEM_H);
@@ -640,11 +618,7 @@ function buildWheel(containerId, min, max, step, initial){
       if(c.classList.contains('wheel-item')) c.classList.toggle('center-val', i-1===idx);
     });
   }
-  el.addEventListener('scroll', ()=>{
-    highlightCenter();
-    const i = Math.round(el.scrollTop/ITEM_H);
-    if(i!==_lastIdx){ _lastIdx=i; if(!_suppress) hapticTick(); }
-  }, {passive:true});
+  el.addEventListener('scroll', ()=>{ highlightCenter(); }, {passive:true});
   setValue(initial!==undefined && initial!==null ? initial : values[Math.floor(values.length/2)], false);
   setTimeout(highlightCenter, 50);
   return {getValue, setValue};
@@ -815,7 +789,7 @@ document.getElementById('btnStartTest').addEventListener('click', ()=>{
   requestWake();
   showScreen('screen-running');
   vibrate(120);
-  Metro.start();
+  Metro.reset();
 
   timerInterval = setInterval(()=>{
     // The 6MWT clock never stops — even during a pause the elapsed time keeps running.
@@ -852,6 +826,7 @@ document.getElementById('btnPause').addEventListener('click', ()=>{
     topStatus.classList.add('paused');
     flag.style.display='block';
     btn.textContent='Reprendre';
+    Metro.pause();
     vibrate([60,60,60]);
   } else {
     state.isPaused = false;
@@ -860,6 +835,7 @@ document.getElementById('btnPause').addEventListener('click', ()=>{
     topStatus.classList.remove('paused');
     flag.style.display='none';
     btn.textContent='Pause';
+    Metro.resume();
     vibrate(60);
   }
 });
@@ -917,13 +893,13 @@ document.getElementById('btnPlus25').addEventListener('click', ()=>{
   const pauseMs = pauseOverlapMs(lastTs, now);
   const segDurationSec = Math.max(0, (now - lastTs - pauseMs)/1000);
   const speedMs = segDurationSec>0 ? (25/segDurationSec) : null;
-  Metro.setTempoFromSec(segDurationSec);
 
   const prevSpeed = state.distanceLog.length ? state.distanceLog[state.distanceLog.length-1].speedMs : null;
   const trend = speedTrend(speedMs, prevSpeed);
 
   state.distance += 25;
   state.distanceLog.push({distance: state.distance, ts: now, segDurationSec, speedMs, trend});
+  Metro.startLeg(segDurationSec);
 
   const num = document.getElementById('distanceNum');
   num.textContent = state.distance;
@@ -947,6 +923,7 @@ document.getElementById('btnMinus25').addEventListener('click', ()=>{
     ? `Vitesse sur ces 25 m : ${formatSpeed(prev.speedMs)}`
     : '—';
   renderTrend(prev ? prev.trend : null);
+  Metro.reset();
   vibrate(30);
 });
 
@@ -957,7 +934,7 @@ function endTest(manual){
   state.stoppedEarly = state.endedAtSec < 355; // small tolerance
   vibrate([150,80,150,80,150]);
   clearInterval(timerInterval);
-  Metro.stop();
+  Metro.reset();
   // close any open capture overlay
   document.getElementById('captureOverlay').classList.remove('show');
   captureState.active = false;
@@ -1530,61 +1507,57 @@ document.getElementById('btnNewTest').addEventListener('click', ()=>{
 
 // ---------------- IN-TEST METRONOME ----------------
 const Metro = (function(){
-  const GREEN='#2f4d3a', CARD='#f7f2e9', PI2=Math.PI*2;
-  const smooth=p=>p*p*(3-2*p);
-  const padL=18, padR=18, R=5, HDEF=1350;
-  const FASTs=12, SLOWs=55, PMIN=650, PMAX=2100;
-  let cv,ctx,W,H,dpr,raf,running=false;
-  let legStart=0,legDur=HDEF,fromLeft=true,period=HDEF,ticks=[],lastTs=0;
-  function _fit(){
-    if(!cv) return;
-    dpr=Math.max(1,window.devicePixelRatio||1);
-    const r=cv.getBoundingClientRect(); W=r.width; H=r.height||52;
-    cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
-    ctx.setTransform(dpr,0,0,dpr,0,0);
+  // One sweep = one 25 m leg. Its duration is the duration of the PREVIOUS leg,
+  // so the sweep should reach the far side exactly when the patient completes 25 m.
+  // Direction alternates: the patient turns around at each end.
+  const MIN_MS = 800, MAX_MS = 300000;
+  let fill, edge, raf;
+  let running = false, paused = false;
+  let elapsed = 0, durMs = 0, lastTs = 0, dir = 1;
+
+  function els(){
+    if(!fill) fill = document.getElementById('metroFill');
+    if(!edge) edge = document.getElementById('metroEdge');
+    return fill && edge;
   }
-  function dot(x,y,r){
-    const g=ctx.createRadialGradient(x,y,0,x,y,r*2.6);
-    g.addColorStop(0,'rgba(47,77,58,0.32)'); g.addColorStop(1,'rgba(47,77,58,0)');
-    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r*2.6,0,PI2); ctx.fill();
-    ctx.fillStyle=GREEN; ctx.beginPath(); ctx.arc(x,y,r,0,PI2); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(x-r*0.32,y-r*0.32,r*0.32,0,PI2); ctx.fill();
+  function render(p){
+    const pct = (p*100).toFixed(2);
+    fill.style.width = pct + '%';
+    fill.classList.toggle('rtl', dir === -1);
+    edge.style.left = (dir === 1 ? pct : (100 - p*100).toFixed(2)) + '%';
+    edge.style.opacity = '1';
+    edge.classList.toggle('hold', p >= 1);
   }
   function frame(ts){
     if(!running) return;
-    if(!lastTs) lastTs=ts;
-    const dt=ts-lastTs; lastTs=ts;
-    if(typeof state!=='undefined' && state.isPaused){ legStart+=dt; } // freeze during pause
-    ctx.fillStyle=CARD; ctx.fillRect(0,0,W,H);
-    const y=H/2, L=padL, Rr=W-padR;
-    ctx.strokeStyle='rgba(47,77,58,0.05)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(L,y); ctx.lineTo(Rr,y); ctx.stroke();
-    ctx.fillStyle='rgba(47,77,58,0.14)';
-    ctx.fillRect(L-1,y-6,2,12); ctx.fillRect(Rr-1,y-6,2,12);
-    const p=Math.min((ts-legStart)/legDur,1);
-    const s=smooth(p), x = fromLeft ? L+(Rr-L)*s : Rr-(Rr-L)*s;
-    ticks=ticks.filter(t=>ts-t.t0<240);
-    for(const t of ticks){ const q=(ts-t.t0)/240; ctx.strokeStyle='rgba(47,77,58,'+((1-q)*0.5)+')'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(t.x,y,5+q*12,0,PI2); ctx.stroke(); }
-    dot(x,y,R);
-    if(p>=1){ const arrivedRight=fromLeft; fromLeft=!fromLeft; legStart=ts; legDur=period; ticks.push({x:arrivedRight?Rr:L,t0:ts}); }
-    raf=requestAnimationFrame(frame);
+    if(!lastTs) lastTs = ts;
+    const dt = ts - lastTs; lastTs = ts;
+    if(!paused) elapsed += dt;
+    render(Math.min(elapsed / durMs, 1));
+    raf = requestAnimationFrame(frame);
   }
   return {
-    start(){
-      cv=document.getElementById('metroCanvas'); if(!cv) return; ctx=cv.getContext('2d');
-      _fit(); running=true; legStart=performance.now(); legDur=period; fromLeft=true; ticks=[]; lastTs=0;
-      cancelAnimationFrame(raf); raf=requestAnimationFrame(frame);
+    reset(){
+      running = false; paused = false; cancelAnimationFrame(raf);
+      elapsed = 0; lastTs = 0; dir = 1;
+      if(!els()) return;
+      fill.style.width = '0%'; fill.classList.remove('rtl');
+      edge.style.opacity = '0'; edge.classList.remove('hold');
     },
-    stop(){ running=false; cancelAnimationFrame(raf); },
-    setTempoFromSec(sec){
-      if(!sec||!isFinite(sec)||sec<=0) return;
-      let t=(sec-FASTs)/(SLOWs-FASTs); t=Math.max(0,Math.min(1,t));
-      period=Math.round(PMIN+t*(PMAX-PMIN));
+    startLeg(prevSegSec){
+      if(!els()) return;
+      const ms = (prevSegSec && isFinite(prevSegSec)) ? prevSegSec*1000 : 0;
+      if(ms <= 0){ this.reset(); return; }
+      durMs = Math.max(MIN_MS, Math.min(MAX_MS, ms));
+      dir = (running ? -dir : 1);          // first animated leg goes left -> right
+      elapsed = 0; lastTs = 0; paused = false; running = true;
+      render(0);
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
     },
-    fit(){ _fit(); }
+    pause(){ if(running) paused = true; },
+    resume(){ if(running) paused = false; }
   };
 })();
-window.addEventListener('resize',()=>{ Metro.fit(); });
 </script>
 
 </body>
